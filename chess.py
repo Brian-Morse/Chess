@@ -8,11 +8,57 @@ class Piece(pygame.sprite.Sprite):
         self.type = type
         self.pos = pos
         self.has_moved = has_moved
+        self.is_clicked = False
         self.image = pygame.image.load(f'images/{side}_{type}.png').convert_alpha()
         self.rect = self.image.get_rect(topleft = coord_to_pixel(*pos))
 
+    def get_pressure(self):
+        pass
+
+    def get_possible_move_locs(self):
+        return self.get_pressure()
+
+    def get_move_locs(self):
+        pass
+
+    def show_moves(self):
+        moves = self.get_move_locs()
+        for move in moves:
+            screen.blit(avail_move_surf,coord_to_pixel(*move))
+
     def update(self):
-        screen.blit(avail_move_surf,coord_to_pixel(*self.pos))
+        pass
+
+class Pawn(Piece):
+    def __init__(self, side, pos, has_moved = False):
+        super().__init__(side, 'pawn', pos, has_moved)
+
+    def get_pressure(self):
+        x,y = self.pos
+        if self.type == 'white':
+            if x == 0:
+                return [(1, y-1)]
+            elif x == 7:
+                return [(6, y-1)]
+            else:
+                return [(x-1,y-1),(x+1,y-1)]
+        else:
+            if x == 0:
+                return [(1, y+1)]
+            elif x == 7:
+                return [(6, y+1)]
+            else:
+                return [(x-1,y+1),(x+1,y+1)]
+            
+    def get_possible_move_locs(self):
+        pressure = self.get_pressure()
+        
+    
+                
+                
+
+
+            
 
 
 
@@ -73,9 +119,10 @@ while True:
 
     screen.blit(board_background, (0,0))
     for piece in white_pieces:
-        piece.draw(screen)
         piece.update()
+        piece.draw(screen)
     for piece in black_pieces:
+        piece.update()
         piece.draw(screen)
 
     pygame.display.update()
