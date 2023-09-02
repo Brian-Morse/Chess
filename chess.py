@@ -26,8 +26,28 @@ class Piece(pygame.sprite.Sprite):
         for move in moves:
             screen.blit(avail_move_surf,coord_to_pixel(*move))
 
-    def update(self):
-        pass
+    def update(self, events):
+        if events:
+            for event in events:
+                if event.type == pygame.MOUSEBUTTONUP:
+                    #This piece is already clicked
+                    if self.is_clicked:
+                        #Clicking the same piece
+                        if self.pos == pixel_to_coord(*event.pos):
+                            self.is_clicked = True
+                        #Check for other possibilities and take action
+                        else:
+                            self.is_clicked = False
+                    else:
+                        #See if the piece is being clicked for the first time
+                        if self.pos == pixel_to_coord(*event.pos):
+                            self.is_clicked = True
+
+        if self.is_clicked:
+            #TEMPORARY
+            #Visual continuance
+            screen.blit(avail_move_surf,coord_to_pixel(*self.pos))
+
 
 class Pawn(Piece):
     def __init__(self, side, pos, has_moved = False):
@@ -56,21 +76,12 @@ class Pawn(Piece):
         if self.type == 'white':
             for move in pressure:
                 if [b_piece for b_piece in black_pieces if b_piece.sprite.pos == move]:
-                    possible_moves.append(move)
-            
-
-    
+                    possible_moves.append(move)   
                 
 class Side(pygame.sprite.Group):
     def __init__(self, *sprites):
         super().__init__(*sprites)
         self.enpassant = []               
-
-
-            
-
-
-
 
 SQUARE_SIZE = 80
 HEIGHT = 8
@@ -78,6 +89,9 @@ WIDTH = 8
 
 def coord_to_pixel(x,y):
     return (x*SQUARE_SIZE,y*SQUARE_SIZE)
+
+def pixel_to_coord(x,y):
+    return ((int)(x/SQUARE_SIZE),(int)(y/SQUARE_SIZE))
 
 #Screen and clock set up
 pygame.init()
@@ -90,7 +104,7 @@ board_background = pygame.image.load('images/chess_board.png').convert()
 
 avail_move_surf = pygame.image.load('images/avail_move.png').convert_alpha()
 
-#Pieces set up
+#White pieces set up
 white_pieces = Side(Piece('white','rook',(0,7)),Piece('white','knight',(1,7)),
                     Piece('white','bishop',(2,7)),Piece('white','queen',(3,7)),
                     Piece('white','king',(4,7)),Piece('white','rook',(7,7)),
@@ -98,6 +112,7 @@ white_pieces = Side(Piece('white','rook',(0,7)),Piece('white','knight',(1,7)),
 for x in range(8):
     white_pieces.add(Pawn('white',(x,6)))
 
+#Black pieces set up
 black_pieces = Side(Piece('black','rook',(0,0)),Piece('black','knight',(1,0)),
                     Piece('black','bishop',(2,0)),Piece('black','queen',(3,0)),
                     Piece('black','king',(4,0)),Piece('black','rook',(7,0)),
@@ -105,24 +120,22 @@ black_pieces = Side(Piece('black','rook',(0,0)),Piece('black','knight',(1,0)),
 for x in range(8):
     black_pieces.add(Pawn('black',(x,1)))
 
-
-for piece in white_pieces:
-    print(piece.pos)
-
-
-
+#Game loop
 while True:
-    for event in pygame.event.get():
+    #Event loop
+    events = pygame.event.get()
+    for event in events:
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
 
+    #Draw and update the screen
     screen.blit(board_background, (0,0))
 
-    white_pieces.update()
+    white_pieces.update(events)
     white_pieces.draw(screen)
     
-    black_pieces.update()
+    black_pieces.update(events)
     black_pieces.draw(screen)
 
     pygame.display.update()
