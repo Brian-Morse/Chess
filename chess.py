@@ -11,6 +11,9 @@ class Piece(pygame.sprite.Sprite):
         self.image = pygame.image.load(f'images/{side}_{type}.png').convert_alpha()
         self.rect = self.image.get_rect(topleft = coord_to_pixel(*pos))
 
+    def update(self):
+        screen.blit(avail_move_surf,coord_to_pixel(*self.pos))
+
 
 
 
@@ -29,6 +32,8 @@ clock = pygame.time.Clock()
 
 #Background
 board_background = pygame.image.load('images/chess_board.png').convert()
+
+avail_move_surf = pygame.image.load('images/avail_move.png').convert_alpha()
 
 #TEMPORARY SET UP FOR TESTING
 white_pieces = []
@@ -69,6 +74,7 @@ while True:
     screen.blit(board_background, (0,0))
     for piece in white_pieces:
         piece.draw(screen)
+        piece.update()
     for piece in black_pieces:
         piece.draw(screen)
 
