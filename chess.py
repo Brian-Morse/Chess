@@ -88,7 +88,7 @@ class Piece(pygame.sprite.Sprite):
 
 
 class Pawn(Piece):
-    """Creates a Pawn chess piece, most common piece from chess"""
+    """A Pawn chess piece, most common piece from chess"""
     def __init__(self, side, pos, has_moved = False):
         """Initiates the Pawn piece"""
         super().__init__(side, 'pawn', pos, has_moved)
@@ -151,12 +151,47 @@ class Pawn(Piece):
         return possible_moves
 
 class Knight(Piece):
-    """Creates a knight chess piece, moves in Ls"""
+    """A knight chess piece, moves in Ls"""
     def __init__(self, side, pos, has_moved = False):
         """Initializes the knight piece"""
         super().__init__(side,'knight',pos,has_moved)
         #Set up the knight moves
         self.dirs = [(2,1),(2,-1),(-2,1),(-2,-1),(1,2),(1,-2),(-1,2),(-1,-2)]
+
+class Bishop(Piece):
+    """A bishop chess piece, moves in diagonals"""
+    def __init__(self, side, pos, has_moved = False):
+        """Initializes the bishop piece"""
+        super().__init__(side,'bishop',pos,has_moved)
+        #Set up the bishop moves
+        self.dirs = [(1,1),(-1,-1),(1,-1),(-1,1)]
+        self.range = -1
+
+class Rook(Piece):
+    """A rook chess piece, moves in horizontals"""
+    def __init__(self, side, pos, has_moved = False):
+        """Initializes the rook piece"""
+        super().__init__(side,'rook',pos,has_moved)
+        #Set up the rook moves
+        self.dirs = [(1,0),(-1,0),(0,1),(0,-1)]
+        self.range = -1
+
+class Queen(Piece):
+    """A queen chess piece, moves in all directions, most powerful piece"""
+    def __init__(self, side, pos, has_moved = False):
+        """Initializes the queen piece"""
+        super().__init__(side,'queen',pos,has_moved)
+        #Set up the queen moves
+        self.dirs = [(1,1),(-1,-1),(1,-1),(-1,1),(1,0),(-1,0),(0,1),(0,-1)]
+        self.range = -1
+
+class King(Piece):
+    """A king chess piece, the most important of all pieces"""
+    def __init__(self, side, pos, has_moved = False):
+        """Initializes the king piece"""
+        super().__init__(side,'king',pos,has_moved)
+        #Set up the king moves
+        self.dirs = [(1,1),(-1,-1),(1,-1),(-1,1),(1,0),(-1,0),(0,1),(0,-1)]
 
 class Side(pygame.sprite.Group):
     """Group class to hold a player's pieces"""
@@ -194,25 +229,25 @@ board_background = pygame.image.load('images/chess_board.png').convert()
 avail_move_surf = pygame.image.load('images/avail_move.png').convert_alpha()
 
 #White pieces set up
-white_pieces = Side(Piece('white','rook',(0,7)),Knight('white',(1,7)),
-                    Piece('white','bishop',(2,7)),Piece('white','queen',(3,7)),
-                    Piece('white','king',(4,7)),Piece('white','rook',(7,7)),
-                    Knight('white',(6,7)),Piece('white','bishop',(5,7)))
+white_pieces = Side(Rook('white',(0,7)),Knight('white',(1,7)),
+                    Bishop('white',(2,7)),Queen('white',(3,7)),
+                    King('white',(4,7)),Rook('white',(7,7)),
+                    Knight('white',(6,7)),Bishop('white',(5,7)))
 for x in range(8):
     white_pieces.add(Pawn('white',(x,6)))
 
 #Black pieces set up
-black_pieces = Side(Piece('black','rook',(0,0)),Knight('black',(1,0)),
-                    Piece('black','bishop',(2,0)),Piece('black','queen',(3,0)),
-                    Piece('black','king',(4,0)),Piece('black','rook',(7,0)),
-                    Knight('black',(6,0)),Piece('black','bishop',(5,0)))
+black_pieces = Side(Rook('black',(0,0)),Knight('black',(1,0)),
+                    Bishop('black',(2,0)),Queen('black',(3,0)),
+                    King('black',(4,0)),Rook('black',(7,0)),
+                    Knight('black',(6,0)),Bishop('black',(5,0)))
 for x in range(8):
     black_pieces.add(Pawn('black',(x,1)))
 
 
 white_pieces.add(Pawn('white',(4,2)))
 white_pieces.add(Pawn('white',(4,3)))
-black_pieces.add(Knight('black',(3,4)))
+white_pieces.add(King('white',(4,4)))
 
 #Game loop
 while True:
