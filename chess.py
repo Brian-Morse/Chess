@@ -9,6 +9,8 @@ class Piece(pygame.sprite.Sprite):
         self.side = side
         self.type = type
         self.pos = pos
+        self.prev_pos = (0,0)
+        self.just_moved = False
         self.has_moved = has_moved
         self.dirs = []
         self.range = 1
@@ -47,7 +49,6 @@ class Piece(pygame.sprite.Sprite):
                     y += dir[1]
         return pressure
 
-
     def get_possible_move_locs(self):
         """Returns the possible move locations, ignoring check"""
         return self.get_pressure()
@@ -62,26 +63,49 @@ class Piece(pygame.sprite.Sprite):
         for move in moves:
             screen.blit(avail_move_surf,coord_to_pixel(*move))
 
+    def get_just_moved(self):
+        """Check if this piece had just moved"""
+        return self.just_moved
+    
+    def get_move_info(self):
+        """Get the info for the move this piece just made"""
+        self.just_moved = False
+        return (self.type,self.prev_pos,self.pos)
+
     def update(self, events):
         """Update the chess piece action and visual"""
         if events:
             for event in events:
                 if event.type == pygame.MOUSEBUTTONUP:
+                    event_pos = pixel_to_coord(*event.pos)
                     #This piece is already clicked
                     if self.is_clicked:
                         #Clicking the same piece
-                        if self.pos == pixel_to_coord(*event.pos):
+                        if self.pos == event_pos:
                             self.is_clicked = True
                         #Check for other possibilities and take action
                         else:
                             self.is_clicked = False
+                            if event_pos in self.get_move_locs():
+                                self.prev_pos = self.pos
+                                self.pos = event_pos
+                                self.rect.topleft = coord_to_pixel(*self.pos)
+                                self.has_moved = True
+                                self.just_moved = True
+                                if self.side == 'white':
+                                    pygame.sprite.spritecollide(self, 
+                                                                black_pieces, 
+                                                                dokill = True)
+                                else:
+                                    pygame.sprite.spritecollide(self,
+                                                                white_pieces,
+                                                                dokill=True)
                     else:
                         #See if the piece is being clicked for the first time
-                        if self.pos == pixel_to_coord(*event.pos):
+                        if self.pos == event_pos:
                             self.is_clicked = True
 
         if self.is_clicked:
-            #TEMPORARY
             #Visual continuance
             screen.blit(avail_move_surf,coord_to_pixel(*self.pos))
             self.show_moves()
@@ -198,7 +222,22 @@ class Side(pygame.sprite.Group):
     def __init__(self, *sprites):
         """Initializes group variables to track game"""
         super().__init__(*sprites)
-        self.enpassant = []               
+        self.enpassant = []
+        self.last_move = ()
+
+    def get_info(self):
+        """Retrieve important info from pieces to see what is 
+        available"""  
+        for piece in self:
+            if piece.get_just_moved():
+                self.last_move = piece.get_move_info()
+
+    def group_draw(self):
+        """Draws important info for the side"""
+        if self.last_move:
+            screen.blit(last_move_surf,coord_to_pixel(*self.last_move[1]))
+            screen.blit(last_move_surf,coord_to_pixel(*self.last_move[2]))
+
 
 #Constants
 SQUARE_SIZE = 80
@@ -227,6 +266,8 @@ clock = pygame.time.Clock()
 board_background = pygame.image.load('images/chess_board.png').convert()
 
 avail_move_surf = pygame.image.load('images/avail_move.png').convert_alpha()
+
+last_move_surf = pygame.image.load('images/last_move.png').convert_alpha()
 
 #White pieces set up
 white_pieces = Side(Rook('white',(0,7)),Knight('white',(1,7)),
@@ -262,9 +303,13 @@ while True:
     screen.blit(board_background, (0,0))
 
     white_pieces.update(events)
+    white_pieces.get_info()
+    white_pieces.group_draw()
     white_pieces.draw(screen)
     
     black_pieces.update(events)
+    black_pieces.get_info()
+    black_pieces.group_draw()
     black_pieces.draw(screen)
 
     pygame.display.update()
