@@ -3,10 +3,9 @@ import sys
 
 class Piece(pygame.sprite.Sprite):
     """Sprite class to represent all possible chess pieces"""
-    def __init__(self, side, type, pos, has_moved = False):
+    def __init__(self, type, pos, has_moved = False):
         """Initiates the general chess piece"""
         super().__init__()
-        self.side = side
         self.type = type
         self.pos = pos
         self.prev_pos = (0,0)
@@ -15,22 +14,35 @@ class Piece(pygame.sprite.Sprite):
         self.dirs = []
         self.range = 1
         self.is_clicked = False
-        self.image = pygame.image.load(f'images/{side}_{type}.png').convert_alpha()
-        self.rect = self.image.get_rect(topleft = coord_to_pixel(*pos))
+
+    def set_side(self, side, groups):
+        self.side = side
+        self.groups = groups
+        self.image = pygame.image.load(f'images/{side}_{self.type}.png').convert_alpha()
+        self.rect = self.image.get_rect(topleft = coord_to_pixel(*self.pos))
+
+    def check_side(self):
+        return self.side == self.groups[0].get_side()
+
+    def get_type(self):
+        return self.type
+
+    def get_pos(self):
+        return self.pos
 
     def get_pressure(self):
         """Returns the positions that this chess piece puts pressure on"""
         pressure = []
-        if self.side == 'white':
+        if self.check_side():
             for dir in self.dirs:
                 dir_range = self.range
                 x = self.pos[0] + dir[0]
                 y = self.pos[1] + dir[1]
                 while (dir_range != 0 and x >= 0 and x < WIDTH and y >= 0 and 
-                       y < HEIGHT and not collide_point(white_pieces,x,y)):
+                       y < HEIGHT and not collide_point(self.groups[0],x,y)):
                     pressure.append((x,y))
                     dir_range -= 1
-                    if collide_point(black_pieces,x,y):
+                    if collide_point(self.groups[1],x,y):
                         dir_range = 0
                     x += dir[0]
                     y += dir[1]
@@ -40,10 +52,10 @@ class Piece(pygame.sprite.Sprite):
                 x = self.pos[0] + dir[0]
                 y = self.pos[1] + dir[1]
                 while (dir_range != 0 and x >= 0 and x < WIDTH and y >= 0 and 
-                       y < HEIGHT and not collide_point(black_pieces,x,y)):
+                       y < HEIGHT and not collide_point(self.groups[1],x,y)):
                     pressure.append((x,y))
                     dir_range -= 1
-                    if collide_point(white_pieces,x,y):
+                    if collide_point(self.groups[0],x,y):
                         dir_range = 0
                     x += dir[0]
                     y += dir[1]
@@ -61,10 +73,10 @@ class Piece(pygame.sprite.Sprite):
             #Save old position and test new position if check results
             old_pos = self.pos
             self.pos = move
-            if self.side == 'white':
-                causes_check = white_pieces.test_if_check(move = move)
+            if self.check_side():
+                causes_check = self.groups[0].test_if_check(move = move)
             else:
-                causes_check = black_pieces.test_if_check(move = move)
+                causes_check = self.groups[1].test_if_check(move = move)
             #Can move to this space
             if not causes_check:
                 moves.append(move)
@@ -107,13 +119,13 @@ class Piece(pygame.sprite.Sprite):
                                 self.rect.topleft = coord_to_pixel(*self.pos)
                                 self.has_moved = True
                                 self.just_moved = True
-                                if self.side == 'white':
+                                if self.check_side():
                                     pygame.sprite.spritecollide(self, 
-                                                                black_pieces, 
+                                                                self.groups[1], 
                                                                 dokill = True)
                                 else:
                                     pygame.sprite.spritecollide(self,
-                                                                white_pieces,
+                                                                self.groups[0],
                                                                 dokill=True)
                     else:
                         #See if the piece is being clicked for the first time
@@ -128,14 +140,14 @@ class Piece(pygame.sprite.Sprite):
 
 class Pawn(Piece):
     """A Pawn chess piece, most common piece from chess"""
-    def __init__(self, side, pos, has_moved = False):
+    def __init__(self, pos, has_moved = False):
         """Initiates the Pawn piece"""
-        super().__init__(side, 'pawn', pos, has_moved)
+        super().__init__('pawn', pos, has_moved)
 
     def get_pressure(self):
         """Returns the diagonal points of applied pressure"""
         x,y = self.pos
-        if self.side == 'white':
+        if self.check_side():
             if x == 0:
                 return [(1, y-1)]
             elif x == 7:
@@ -154,95 +166,114 @@ class Pawn(Piece):
         """Sees if there are pieces to take diagonally or space ahead"""
         pressure = self.get_pressure()
         possible_moves = []
-        if self.side == 'white':
+        if self.check_side():
             #Check if there are diagonal points to capture
             for move in pressure:
-                if collide_point(black_pieces,*move):
+                if collide_point(self.groups[1],*move):
                     possible_moves.append(move)
             #Checks if there is a piece ahead of the pawn
-            if (not collide_point(black_pieces, self.pos[0], self.pos[1]-1) and 
-                not collide_point(white_pieces, self.pos[0],self.pos[1]-1)):
+            if (not collide_point(self.groups[1], self.pos[0], self.pos[1]-1) 
+                and not collide_point(self.groups[0], self.pos[0],
+                                      self.pos[1]-1)):
                 
                 possible_moves.append((self.pos[0],self.pos[1]-1))
                 #Checks if the pawn has moved and if there is a piece two 
                 #spaces ahead
                 if (not self.has_moved and not 
-                    collide_point(black_pieces, self.pos[0], self.pos[1]-2) and 
-                    not collide_point(white_pieces, self.pos[0],self.pos[1]-2)):
+                    collide_point(self.groups[1], self.pos[0], self.pos[1]-2) 
+                    and not collide_point(self.groups[0], self.pos[0],
+                                          self.pos[1]-2)):
                     
                     possible_moves.append((self.pos[0],self.pos[1]-2))
         else:
             #Checks if there are diagonal points to capture
             for move in pressure:
-                if collide_point(white_pieces,*move):
+                if collide_point(self.groups[0],*move):
                     possible_moves.append(move)
             #Checks if there is a piece ahead of the pawn
-            if (not collide_point(black_pieces, self.pos[0], self.pos[1]+1) and 
-                not collide_point(white_pieces, self.pos[0],self.pos[1]+1)):
+            if (not collide_point(self.groups[1], self.pos[0], self.pos[1]+1) 
+                and not collide_point(self.groups[0], self.pos[0],
+                                      self.pos[1]+1)):
                 
                 possible_moves.append((self.pos[0],self.pos[1]+1))
                 #Checks if the pawn has moved and if there is a piece two 
                 #spaces ahead
                 if (not self.has_moved and not 
-                    collide_point(black_pieces, self.pos[0], self.pos[1]+2) and 
-                    not collide_point(white_pieces, self.pos[0],self.pos[1]+2)):
+                    collide_point(self.groups[1], self.pos[0], self.pos[1]+2) 
+                    and not collide_point(self.groups[0], self.pos[0],
+                                          self.pos[1]+2)):
                     possible_moves.append((self.pos[0],self.pos[1]+2))
         return possible_moves
 
 class Knight(Piece):
     """A knight chess piece, moves in Ls"""
-    def __init__(self, side, pos, has_moved = False):
+    def __init__(self, pos, has_moved = False):
         """Initializes the knight piece"""
-        super().__init__(side,'knight',pos,has_moved)
+        super().__init__('knight',pos,has_moved)
         #Set up the knight moves
         self.dirs = [(2,1),(2,-1),(-2,1),(-2,-1),(1,2),(1,-2),(-1,2),(-1,-2)]
 
 class Bishop(Piece):
     """A bishop chess piece, moves in diagonals"""
-    def __init__(self, side, pos, has_moved = False):
+    def __init__(self, pos, has_moved = False):
         """Initializes the bishop piece"""
-        super().__init__(side,'bishop',pos,has_moved)
+        super().__init__('bishop',pos,has_moved)
         #Set up the bishop moves
         self.dirs = [(1,1),(-1,-1),(1,-1),(-1,1)]
         self.range = -1
 
 class Rook(Piece):
     """A rook chess piece, moves in horizontals"""
-    def __init__(self, side, pos, has_moved = False):
+    def __init__(self, pos, has_moved = False):
         """Initializes the rook piece"""
-        super().__init__(side,'rook',pos,has_moved)
+        super().__init__('rook',pos,has_moved)
         #Set up the rook moves
         self.dirs = [(1,0),(-1,0),(0,1),(0,-1)]
         self.range = -1
 
 class Queen(Piece):
     """A queen chess piece, moves in all directions, most powerful piece"""
-    def __init__(self, side, pos, has_moved = False):
+    def __init__(self, pos, has_moved = False):
         """Initializes the queen piece"""
-        super().__init__(side,'queen',pos,has_moved)
+        super().__init__('queen',pos,has_moved)
         #Set up the queen moves
         self.dirs = [(1,1),(-1,-1),(1,-1),(-1,1),(1,0),(-1,0),(0,1),(0,-1)]
         self.range = -1
 
 class King(Piece):
     """A king chess piece, the most important of all pieces"""
-    def __init__(self, side, pos, has_moved = False):
+    def __init__(self, pos, has_moved = False):
         """Initializes the king piece"""
-        super().__init__(side,'king',pos,has_moved)
+        super().__init__('king',pos,has_moved)
         #Set up the king moves
         self.dirs = [(1,1),(-1,-1),(1,-1),(-1,1),(1,0),(-1,0),(0,1),(0,-1)]
 
 class Side(pygame.sprite.Group):
     """Group class to hold a player's pieces"""
-    def __init__(self, side, *sprites):
+
+    #Collection of sides
+    sides = []
+
+    def __init__(self, side, *sprites: Piece):
         """Initializes group variables to track game"""
-        super().__init__(*sprites)
+        #Establish side before adding sprites
         self.side = side
+        self.sides.append(self)
+        #Now do the normal initialization to add sprites to the group
+        super().__init__(*sprites)
         self.enpassant = []
         self.last_move = ()
         for piece in self:
-            if piece.type == 'king':
+            if piece.get_type() == 'king':
                 self.king = piece
+
+    def add(self, *sprites: Piece):
+        super().add(*sprites)
+        for sprite in sprites:
+            sprite.set_side(self.side,self.sides)
+    
+    def get_side(self):
+        return self.side
 
     def get_info(self):
         """Retrieve important info from pieces to see what is 
@@ -258,27 +289,29 @@ class Side(pygame.sprite.Group):
             screen.blit(last_move_surf,coord_to_pixel(*self.last_move[1]))
             screen.blit(last_move_surf,coord_to_pixel(*self.last_move[2]))
         if self.test_if_check():
-            screen.blit(check_surf,coord_to_pixel(*self.king.pos))
+            screen.blit(check_surf,coord_to_pixel(*self.king.get_pos()))
 
+    def check_side(self):
+        return self.side == self.sides[0].get_side
 
     def test_if_check(self, move = None):
         """Returns true if this side is in check, false otherwise"""
         #Finds if any black piece pressures the white king
-        if self.side == 'white':
-            for piece in black_pieces:
+        if self.check_side():
+            for piece in self.sides[1]:
                 #Piece is hypothetically captured
-                if piece.pos == move:
+                if piece.get_pos() == move:
                     continue
                 #Check if this piece is putting the king in check
-                if self.king.pos in piece.get_pressure():
+                if self.king.get_pos() in piece.get_pressure():
                     return True
         #Finds if any white piece pressures the black king
         else:
-            for piece in white_pieces:
+            for piece in self.sides[0]:
                 #Piece is hypothetically captured
-                if piece.pos == move:
+                if piece.get_pos() == move:
                     continue
-                if self.king.pos in piece.get_pressure():
+                if self.king.get_pos() in piece.get_pressure():
                     return True
         return False
 
@@ -298,7 +331,7 @@ def pixel_to_coord(x,y):
 
 def collide_point(group,x,y):
     """Returns a list of all pieces that collide with a coordinate"""
-    return [piece for piece in group if piece.pos == (x,y)]
+    return [piece for piece in group if piece.get_pos() == (x,y)]
 
 #Screen and clock set up
 pygame.init()
@@ -316,20 +349,20 @@ last_move_surf = pygame.image.load('images/last_move.png').convert_alpha()
 check_surf = pygame.image.load('images/check.png').convert_alpha()
 
 #White pieces set up
-white_pieces = Side('white', Rook('white',(0,7)),Knight('white',(1,7)),
-                    Bishop('white',(2,7)),Queen('white',(3,7)),
-                    King('white',(4,7)),Rook('white',(7,7)),
-                    Knight('white',(6,7)),Bishop('white',(5,7)))
+white_pieces = Side('white', Rook((0,7)),Knight((1,7)),
+                    Bishop((2,7)),Queen((3,7)),
+                    King((4,7)),Rook((7,7)),
+                    Knight((6,7)),Bishop((5,7)))
 for x in range(8):
-    white_pieces.add(Pawn('white',(x,6)))
+    white_pieces.add(Pawn((x,6)))
 
 #Black pieces set up
-black_pieces = Side('black', Rook('black',(0,0)),Knight('black',(1,0)),
-                    Bishop('black',(2,0)),Queen('black',(3,0)),
-                    King('black',(4,0)),Rook('black',(7,0)),
-                    Knight('black',(6,0)),Bishop('black',(5,0)))
+black_pieces = Side('black', Rook((0,0)),Knight((1,0)),
+                    Bishop((2,0)),Queen((3,0)),
+                    King((4,0)),Rook((7,0)),
+                    Knight((6,0)),Bishop((5,0)))
 for x in range(8):
-    black_pieces.add(Pawn('black',(x,1)))
+    black_pieces.add(Pawn((x,1)))
 
 
 # white_pieces.add(Pawn('white',(4,2)))
