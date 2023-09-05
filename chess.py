@@ -15,14 +15,14 @@ class Piece(pygame.sprite.Sprite):
         self.range = 1
         self.is_clicked = False
 
-    def set_side(self, side, groups):
+    def set_side(self, side, sides):
         self.side = side
-        self.groups = groups
+        self.sides = sides
         self.image = pygame.image.load(f'images/{side}_{self.type}.png').convert_alpha()
         self.rect = self.image.get_rect(topleft = coord_to_pixel(*self.pos))
 
     def check_side(self):
-        return self.side == self.groups[0].get_side()
+        return self.side == self.sides[0].get_side()
 
     def get_type(self):
         return self.type
@@ -39,10 +39,61 @@ class Piece(pygame.sprite.Sprite):
                 x = self.pos[0] + dir[0]
                 y = self.pos[1] + dir[1]
                 while (dir_range != 0 and x >= 0 and x < WIDTH and y >= 0 and 
-                       y < HEIGHT and not collide_point(self.groups[0],x,y)):
+                       y < HEIGHT):
                     pressure.append((x,y))
                     dir_range -= 1
-                    if collide_point(self.groups[1],x,y):
+                    if (collide_point(self.sides[1],x,y) or 
+                        collide_point(self.sides[0],x,y)):
+                        dir_range = 0
+                    x += dir[0]
+                    y += dir[1]
+                # while (dir_range != 0 and x >= 0 and x < WIDTH and y >= 0 and 
+                #        y < HEIGHT and not collide_point(self.sides[0],x,y)):
+                #     pressure.append((x,y))
+                #     dir_range -= 1
+                #     if (collide_point(self.sides[1],x,y)
+                #         ):
+                #         dir_range = 0
+                #     x += dir[0]
+                #     y += dir[1]
+        else:
+            for dir in self.dirs:
+                dir_range = self.range
+                x = self.pos[0] + dir[0]
+                y = self.pos[1] + dir[1]
+                while (dir_range != 0 and x >= 0 and x < WIDTH and y >= 0 and 
+                       y < HEIGHT):
+                    pressure.append((x,y))
+                    dir_range -= 1
+                    if (collide_point(self.sides[0],x,y) or 
+                        collide_point(self.sides[1],x,y)):
+                        dir_range = 0
+                    x += dir[0]
+                    y += dir[1]
+                # while (dir_range != 0 and x >= 0 and x < WIDTH and y >= 0 and 
+                #        y < HEIGHT and not collide_point(self.sides[1],x,y)):
+                #     pressure.append((x,y))
+                #     dir_range -= 1
+                #     if (collide_point(self.sides[0],x,y)
+                #         ):
+                #         dir_range = 0
+                #     x += dir[0]
+                #     y += dir[1]
+        return pressure
+
+    def get_possible_move_locs(self):
+        """Returns the possible move locations, ignoring check"""
+        possible_moves = []
+        if self.check_side():
+            for dir in self.dirs:
+                dir_range = self.range
+                x = self.pos[0] + dir[0]
+                y = self.pos[1] + dir[1]
+                while (dir_range != 0 and x >= 0 and x < WIDTH and y >= 0 and 
+                       y < HEIGHT and not collide_point(self.sides[0],x,y)):
+                    possible_moves.append((x,y))
+                    dir_range -= 1
+                    if collide_point(self.sides[1],x,y):
                         dir_range = 0
                     x += dir[0]
                     y += dir[1]
@@ -52,18 +103,14 @@ class Piece(pygame.sprite.Sprite):
                 x = self.pos[0] + dir[0]
                 y = self.pos[1] + dir[1]
                 while (dir_range != 0 and x >= 0 and x < WIDTH and y >= 0 and 
-                       y < HEIGHT and not collide_point(self.groups[1],x,y)):
-                    pressure.append((x,y))
+                       y < HEIGHT and not collide_point(self.sides[1],x,y)):
+                    possible_moves.append((x,y))
                     dir_range -= 1
-                    if collide_point(self.groups[0],x,y):
+                    if collide_point(self.sides[0],x,y):
                         dir_range = 0
                     x += dir[0]
                     y += dir[1]
-        return pressure
-
-    def get_possible_move_locs(self):
-        """Returns the possible move locations, ignoring check"""
-        return self.get_pressure()
+        return possible_moves
 
     def get_move_locs(self):
         """Returns locations this piece can move to"""
@@ -74,9 +121,9 @@ class Piece(pygame.sprite.Sprite):
             old_pos = self.pos
             self.pos = move
             if self.check_side():
-                causes_check = self.groups[0].test_if_check(move = move)
+                causes_check = self.sides[0].test_if_check(move = move)
             else:
-                causes_check = self.groups[1].test_if_check(move = move)
+                causes_check = self.sides[1].test_if_check(move = move)
             #Can move to this space
             if not causes_check:
                 moves.append(move)
@@ -121,11 +168,11 @@ class Piece(pygame.sprite.Sprite):
                                 self.just_moved = True
                                 if self.check_side():
                                     pygame.sprite.spritecollide(self, 
-                                                                self.groups[1], 
+                                                                self.sides[1], 
                                                                 dokill = True)
                                 else:
                                     pygame.sprite.spritecollide(self,
-                                                                self.groups[0],
+                                                                self.sides[0],
                                                                 dokill=True)
                     else:
                         #See if the piece is being clicked for the first time
@@ -136,7 +183,6 @@ class Piece(pygame.sprite.Sprite):
             #Visual continuance
             screen.blit(avail_move_surf,coord_to_pixel(*self.pos))
             self.show_moves()
-
 
 class Pawn(Piece):
     """A Pawn chess piece, most common piece from chess"""
@@ -169,38 +215,38 @@ class Pawn(Piece):
         if self.check_side():
             #Check if there are diagonal points to capture
             for move in pressure:
-                if collide_point(self.groups[1],*move):
+                if collide_point(self.sides[1],*move):
                     possible_moves.append(move)
             #Checks if there is a piece ahead of the pawn
-            if (not collide_point(self.groups[1], self.pos[0], self.pos[1]-1) 
-                and not collide_point(self.groups[0], self.pos[0],
+            if (not collide_point(self.sides[1], self.pos[0], self.pos[1]-1) 
+                and not collide_point(self.sides[0], self.pos[0],
                                       self.pos[1]-1)):
                 
                 possible_moves.append((self.pos[0],self.pos[1]-1))
                 #Checks if the pawn has moved and if there is a piece two 
                 #spaces ahead
                 if (not self.has_moved and not 
-                    collide_point(self.groups[1], self.pos[0], self.pos[1]-2) 
-                    and not collide_point(self.groups[0], self.pos[0],
+                    collide_point(self.sides[1], self.pos[0], self.pos[1]-2) 
+                    and not collide_point(self.sides[0], self.pos[0],
                                           self.pos[1]-2)):
                     
                     possible_moves.append((self.pos[0],self.pos[1]-2))
         else:
             #Checks if there are diagonal points to capture
             for move in pressure:
-                if collide_point(self.groups[0],*move):
+                if collide_point(self.sides[0],*move):
                     possible_moves.append(move)
             #Checks if there is a piece ahead of the pawn
-            if (not collide_point(self.groups[1], self.pos[0], self.pos[1]+1) 
-                and not collide_point(self.groups[0], self.pos[0],
+            if (not collide_point(self.sides[1], self.pos[0], self.pos[1]+1) 
+                and not collide_point(self.sides[0], self.pos[0],
                                       self.pos[1]+1)):
                 
                 possible_moves.append((self.pos[0],self.pos[1]+1))
                 #Checks if the pawn has moved and if there is a piece two 
                 #spaces ahead
                 if (not self.has_moved and not 
-                    collide_point(self.groups[1], self.pos[0], self.pos[1]+2) 
-                    and not collide_point(self.groups[0], self.pos[0],
+                    collide_point(self.sides[1], self.pos[0], self.pos[1]+2) 
+                    and not collide_point(self.sides[0], self.pos[0],
                                           self.pos[1]+2)):
                     possible_moves.append((self.pos[0],self.pos[1]+2))
         return possible_moves
@@ -292,7 +338,7 @@ class Side(pygame.sprite.Group):
             screen.blit(check_surf,coord_to_pixel(*self.king.get_pos()))
 
     def check_side(self):
-        return self.side == self.sides[0].get_side
+        return self.side == self.sides[0].get_side()
 
     def test_if_check(self, move = None):
         """Returns true if this side is in check, false otherwise"""
