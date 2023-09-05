@@ -55,7 +55,22 @@ class Piece(pygame.sprite.Sprite):
 
     def get_move_locs(self):
         """Returns locations this piece can move to"""
-        return self.get_possible_move_locs()
+        moves = []
+        #Go through all the moves typically afforded to the piece
+        for move in self.get_possible_move_locs():
+            #Save old position and test new position if check results
+            old_pos = self.pos
+            self.pos = move
+            if self.side == 'white':
+                causes_check = white_pieces.test_if_check(move = move)
+            else:
+                causes_check = black_pieces.test_if_check(move = move)
+            #Can move to this space
+            if not causes_check:
+                moves.append(move)
+            #Return to old position
+            self.pos = old_pos
+        return moves
 
     def show_moves(self):
         """Visualize the locations the chess piece can move to"""
@@ -219,11 +234,15 @@ class King(Piece):
 
 class Side(pygame.sprite.Group):
     """Group class to hold a player's pieces"""
-    def __init__(self, *sprites):
+    def __init__(self, side, *sprites):
         """Initializes group variables to track game"""
         super().__init__(*sprites)
+        self.side = side
         self.enpassant = []
         self.last_move = ()
+        for piece in self:
+            if piece.type == 'king':
+                self.king = piece
 
     def get_info(self):
         """Retrieve important info from pieces to see what is 
@@ -234,9 +253,34 @@ class Side(pygame.sprite.Group):
 
     def group_draw(self):
         """Draws important info for the side"""
+        #Draws the latest move
         if self.last_move:
             screen.blit(last_move_surf,coord_to_pixel(*self.last_move[1]))
             screen.blit(last_move_surf,coord_to_pixel(*self.last_move[2]))
+        if self.test_if_check():
+            screen.blit(check_surf,coord_to_pixel(*self.king.pos))
+
+
+    def test_if_check(self, move = None):
+        """Returns true if this side is in check, false otherwise"""
+        #Finds if any black piece pressures the white king
+        if self.side == 'white':
+            for piece in black_pieces:
+                #Piece is hypothetically captured
+                if piece.pos == move:
+                    continue
+                #Check if this piece is putting the king in check
+                if self.king.pos in piece.get_pressure():
+                    return True
+        #Finds if any white piece pressures the black king
+        else:
+            for piece in white_pieces:
+                #Piece is hypothetically captured
+                if piece.pos == move:
+                    continue
+                if self.king.pos in piece.get_pressure():
+                    return True
+        return False
 
 
 #Constants
@@ -269,8 +313,10 @@ avail_move_surf = pygame.image.load('images/avail_move.png').convert_alpha()
 
 last_move_surf = pygame.image.load('images/last_move.png').convert_alpha()
 
+check_surf = pygame.image.load('images/check.png').convert_alpha()
+
 #White pieces set up
-white_pieces = Side(Rook('white',(0,7)),Knight('white',(1,7)),
+white_pieces = Side('white', Rook('white',(0,7)),Knight('white',(1,7)),
                     Bishop('white',(2,7)),Queen('white',(3,7)),
                     King('white',(4,7)),Rook('white',(7,7)),
                     Knight('white',(6,7)),Bishop('white',(5,7)))
@@ -278,7 +324,7 @@ for x in range(8):
     white_pieces.add(Pawn('white',(x,6)))
 
 #Black pieces set up
-black_pieces = Side(Rook('black',(0,0)),Knight('black',(1,0)),
+black_pieces = Side('black', Rook('black',(0,0)),Knight('black',(1,0)),
                     Bishop('black',(2,0)),Queen('black',(3,0)),
                     King('black',(4,0)),Rook('black',(7,0)),
                     Knight('black',(6,0)),Bishop('black',(5,0)))
@@ -286,9 +332,8 @@ for x in range(8):
     black_pieces.add(Pawn('black',(x,1)))
 
 
-white_pieces.add(Pawn('white',(4,2)))
-white_pieces.add(Pawn('white',(4,3)))
-white_pieces.add(King('white',(4,4)))
+# white_pieces.add(Pawn('white',(4,2)))
+# white_pieces.add(Pawn('white',(4,3)))
 
 #Game loop
 while True:
