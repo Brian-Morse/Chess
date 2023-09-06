@@ -47,6 +47,15 @@ class Piece(pygame.sprite.Sprite):
                         dir_range = 0
                     x += dir[0]
                     y += dir[1]
+                # while (dir_range != 0 and x >= 0 and x < WIDTH and y >= 0 and 
+                #        y < HEIGHT and not collide_point(self.sides[0],x,y)):
+                #     pressure.append((x,y))
+                #     dir_range -= 1
+                #     if (collide_point(self.sides[1],x,y)
+                #         ):
+                #         dir_range = 0
+                #     x += dir[0]
+                #     y += dir[1]
         else:
             for dir in self.dirs:
                 dir_range = self.range
@@ -61,6 +70,15 @@ class Piece(pygame.sprite.Sprite):
                         dir_range = 0
                     x += dir[0]
                     y += dir[1]
+                # while (dir_range != 0 and x >= 0 and x < WIDTH and y >= 0 and 
+                #        y < HEIGHT and not collide_point(self.sides[1],x,y)):
+                #     pressure.append((x,y))
+                #     dir_range -= 1
+                #     if (collide_point(self.sides[0],x,y)
+                #         ):
+                #         dir_range = 0
+                #     x += dir[0]
+                #     y += dir[1]
         return pressure
 
     def get_possible_move_locs(self):
@@ -309,11 +327,6 @@ class Side(pygame.sprite.Group):
         for piece in self:
             if piece.get_just_moved():
                 self.last_move = piece.get_move_info()
-                if piece.type == 'pawn' and (piece.get_pos()[1] == 0 or 
-                                             piece.get_pos()[1] == HEIGHT-1):
-                    return (PROMOTION, self.side, piece.get_pos(), 
-                            pygame.image.load(f'images/{self.side}_promotion.png').convert())
-        return (ACTIVE_GAME) 
 
     def group_draw(self):
         """Draws important info for the side"""
@@ -353,8 +366,6 @@ class Side(pygame.sprite.Group):
 SQUARE_SIZE = 80
 HEIGHT = 8
 WIDTH = 8
-ACTIVE_GAME = 0
-PROMOTION = 1
 
 def coord_to_pixel(x,y):
     """Returns the pixel location of a provided coordinate"""
@@ -373,10 +384,6 @@ pygame.init()
 screen = pygame.display.set_mode((WIDTH*SQUARE_SIZE,HEIGHT*SQUARE_SIZE))
 pygame.display.set_caption("Chess")
 clock = pygame.time.Clock()
-
-#Game organization
-game_state = ACTIVE_GAME
-game_state_info = ()
 
 #Background
 board_background = pygame.image.load('images/chess_board.png').convert()
@@ -418,29 +425,16 @@ while True:
 
     #Draw and update the screen
     screen.blit(board_background, (0,0))
-    if game_state == ACTIVE_GAME:
-        #Draw and update white and black pieces
-        white_pieces.update(events)
-        game_state_info = white_pieces.get_info()
-        game_state = game_state_info[0]
-        white_pieces.group_draw()
-        white_pieces.draw(screen)
-        
-        black_pieces.update(events)
-        #NEED TO UPDATE GAME STATE INFO ONCE TURN IS INCORPORATED
-        black_pieces.get_info()
-        black_pieces.group_draw()
-        black_pieces.draw(screen)
-    elif game_state == PROMOTION:
-        #Draw white and black pieces, no update
-        white_pieces.group_draw()
-        white_pieces.draw(screen)
 
-        black_pieces.group_draw()
-        black_pieces.draw(screen)
-
-        #Draw promotion item
-        screen.blit(game_state_info[3],coord_to_pixel(game_state_info[2]))
+    white_pieces.update(events)
+    white_pieces.get_info()
+    white_pieces.group_draw()
+    white_pieces.draw(screen)
+    
+    black_pieces.update(events)
+    black_pieces.get_info()
+    black_pieces.group_draw()
+    black_pieces.draw(screen)
 
     pygame.display.update()
     clock.tick(60)
