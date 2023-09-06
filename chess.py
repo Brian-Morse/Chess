@@ -47,15 +47,6 @@ class Piece(pygame.sprite.Sprite):
                         dir_range = 0
                     x += dir[0]
                     y += dir[1]
-                # while (dir_range != 0 and x >= 0 and x < WIDTH and y >= 0 and 
-                #        y < HEIGHT and not collide_point(self.sides[0],x,y)):
-                #     pressure.append((x,y))
-                #     dir_range -= 1
-                #     if (collide_point(self.sides[1],x,y)
-                #         ):
-                #         dir_range = 0
-                #     x += dir[0]
-                #     y += dir[1]
         else:
             for dir in self.dirs:
                 dir_range = self.range
@@ -70,15 +61,6 @@ class Piece(pygame.sprite.Sprite):
                         dir_range = 0
                     x += dir[0]
                     y += dir[1]
-                # while (dir_range != 0 and x >= 0 and x < WIDTH and y >= 0 and 
-                #        y < HEIGHT and not collide_point(self.sides[1],x,y)):
-                #     pressure.append((x,y))
-                #     dir_range -= 1
-                #     if (collide_point(self.sides[0],x,y)
-                #         ):
-                #         dir_range = 0
-                #     x += dir[0]
-                #     y += dir[1]
         return pressure
 
     def get_possible_move_locs(self):
@@ -314,12 +296,22 @@ class Side(pygame.sprite.Group):
                 self.king = piece
 
     def add(self, *sprites: Piece):
+        """Adds pieces to the side"""
         super().add(*sprites)
         for sprite in sprites:
             sprite.set_side(self.side,self.sides)
     
     def get_side(self):
+        """Returns the side of this team"""
         return self.side
+    
+    def get_last_move(self):
+        """Returns the last move"""
+        return self.last_move
+
+    def get_promote_image(self):
+        """Gives the image for the promotion of this side"""
+        return pygame.image.load(f'images/{self.side}_promotion.png').convert()
 
     def get_info(self):
         """Retrieve important info from pieces to see what is 
@@ -327,6 +319,14 @@ class Side(pygame.sprite.Group):
         for piece in self:
             if piece.get_just_moved():
                 self.last_move = piece.get_move_info()
+                if piece.type == 'pawn' and (piece.get_pos()[1] == 0 or 
+                                             piece.get_pos()[1] == 7):
+                    piece.kill()
+                    if self.check_side():
+                        return FIRST_PROMOTION
+                    else:
+                        return SECOND_PROMOTION
+        return ACTIVE_GAME
 
     def group_draw(self):
         """Draws important info for the side"""
@@ -366,6 +366,9 @@ class Side(pygame.sprite.Group):
 SQUARE_SIZE = 80
 HEIGHT = 8
 WIDTH = 8
+ACTIVE_GAME = 0
+FIRST_PROMOTION = 1
+SECOND_PROMOTION = -1
 
 def coord_to_pixel(x,y):
     """Returns the pixel location of a provided coordinate"""
@@ -385,6 +388,9 @@ screen = pygame.display.set_mode((WIDTH*SQUARE_SIZE,HEIGHT*SQUARE_SIZE))
 pygame.display.set_caption("Chess")
 clock = pygame.time.Clock()
 
+#Organization
+game_state = ACTIVE_GAME
+
 #Background
 board_background = pygame.image.load('images/chess_board.png').convert()
 
@@ -395,20 +401,24 @@ last_move_surf = pygame.image.load('images/last_move.png').convert_alpha()
 check_surf = pygame.image.load('images/check.png').convert_alpha()
 
 #White pieces set up
-white_pieces = Side('white', Rook((0,7)),Knight((1,7)),
+first_pieces = Side('white', Rook((0,7)),Knight((1,7)),
                     Bishop((2,7)),Queen((3,7)),
                     King((4,7)),Rook((7,7)),
                     Knight((6,7)),Bishop((5,7)))
 for x in range(8):
-    white_pieces.add(Pawn((x,6)))
+    first_pieces.add(Pawn((x,6)))
+
+first_promote_surf = first_pieces.get_promote_image()
 
 #Black pieces set up
-black_pieces = Side('black', Rook((0,0)),Knight((1,0)),
+second_pieces = Side('black', Rook((0,0)),Knight((1,0)),
                     Bishop((2,0)),Queen((3,0)),
                     King((4,0)),Rook((7,0)),
                     Knight((6,0)),Bishop((5,0)))
 for x in range(8):
-    black_pieces.add(Pawn((x,1)))
+    second_pieces.add(Pawn((x,1)))
+
+second_promote_surf = second_pieces.get_promote_image()
 
 
 # white_pieces.add(Pawn('white',(4,2)))
@@ -422,19 +432,60 @@ while True:
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
+        if game_state == FIRST_PROMOTION:
+            if event.type == pygame.MOUSEBUTTONUP:
+                coord = pixel_to_coord(*event.pos)
+                promote_coord = first_pieces.get_last_move()[2]
+                if coord[0] == promote_coord[0]:
+                    if coord[1] == promote_coord[1]:
+                        first_pieces.add(Queen(promote_coord,has_moved=True))
+                        game_state = ACTIVE_GAME
+                    if coord[1] == promote_coord[1]+1:
+                        first_pieces.add(Bishop(promote_coord,has_moved=True))
+                        game_state = ACTIVE_GAME
+                    if coord[1] == promote_coord[1]+2:
+                        first_pieces.add(Knight(promote_coord,has_moved=True))
+                        game_state = ACTIVE_GAME
+                    if coord[1] == promote_coord[1]+3:
+                        first_pieces.add(Rook(promote_coord,has_moved=True))
+                        game_state = ACTIVE_GAME
+        elif game_state == SECOND_PROMOTION:
+            if event.type == pygame.MOUSEBUTTONUP:
+                coord = pixel_to_coord(*event.pos)
+                promote_coord = second_pieces.get_last_move()[2]
+                if coord[0] == promote_coord[0]:
+                    if coord[1] == promote_coord[1]:
+                        second_pieces.add(Queen(promote_coord,has_moved=True))
+                        game_state = ACTIVE_GAME
+                    if coord[1] == promote_coord[1]-1:
+                        second_pieces.add(Bishop(promote_coord,has_moved=True))
+                        game_state = ACTIVE_GAME
+                    if coord[1] == promote_coord[1]-2:
+                        second_pieces.add(Knight(promote_coord,has_moved=True))
+                        game_state = ACTIVE_GAME
+                    if coord[1] == promote_coord[1]-3:
+                        second_pieces.add(Rook(promote_coord,has_moved=True))
+                        game_state = ACTIVE_GAME
 
-    #Draw and update the screen
-    screen.blit(board_background, (0,0))
 
-    white_pieces.update(events)
-    white_pieces.get_info()
-    white_pieces.group_draw()
-    white_pieces.draw(screen)
-    
-    black_pieces.update(events)
-    black_pieces.get_info()
-    black_pieces.group_draw()
-    black_pieces.draw(screen)
+
+    if game_state == ACTIVE_GAME:
+        #Draw and update the screen
+        screen.blit(board_background, (0,0))
+
+        first_pieces.update(events)
+        game_state = first_pieces.get_info()
+        first_pieces.group_draw()
+        first_pieces.draw(screen)
+        
+        second_pieces.update(events)
+        second_pieces.get_info()
+        second_pieces.group_draw()
+        second_pieces.draw(screen)
+    elif game_state == FIRST_PROMOTION:
+        screen.blit(first_promote_surf,coord_to_pixel(*first_pieces.get_last_move()[2]))
+    elif game_state == SECOND_PROMOTION:
+        screen.blit(second_promote_surf,coord_to_pixel(*second_pieces.get_last_move()[2]))
 
     pygame.display.update()
     clock.tick(60)
