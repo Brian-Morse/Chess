@@ -128,6 +128,9 @@ class Piece(pygame.sprite.Sprite):
         self.just_moved = False
         return (self.type,self.prev_pos,self.pos)
 
+    def update_rect(self):
+        self.rect.topleft = coord_to_pixel(*self.pos)
+
     def update(self, events):
         """Update the chess piece action and visual"""
         if events:
@@ -281,6 +284,7 @@ class Side(pygame.sprite.Group):
 
     #Collection of sides
     sides = []
+    move_made = False
 
     def __init__(self, side, *sprites: Piece):
         """Initializes group variables to track game"""
@@ -300,7 +304,7 @@ class Side(pygame.sprite.Group):
         super().add(*sprites)
         for sprite in sprites:
             sprite.set_side(self.side,self.sides)
-    
+
     def get_side(self):
         """Returns the side of this team"""
         return self.side
@@ -319,6 +323,7 @@ class Side(pygame.sprite.Group):
         for piece in self:
             if piece.get_just_moved():
                 self.last_move = piece.get_move_info()
+                Side.move_made = True
                 if piece.type == 'pawn' and (piece.get_pos()[1] == 0 or 
                                              piece.get_pos()[1] == 7):
                     piece.kill()
@@ -328,14 +333,16 @@ class Side(pygame.sprite.Group):
                         return SECOND_PROMOTION
         return ACTIVE_GAME
 
-    def group_draw(self):
-        """Draws important info for the side"""
-        #Draws the latest move
+    def draw_check(self):
+        """Draws check if in check"""
+        if self.test_if_check():
+            screen.blit(check_surf,coord_to_pixel(*self.king.get_pos()))
+
+    def draw_last_move(self):
+        """Draws the last move of this side"""
         if self.last_move:
             screen.blit(last_move_surf,coord_to_pixel(*self.last_move[1]))
             screen.blit(last_move_surf,coord_to_pixel(*self.last_move[2]))
-        if self.test_if_check():
-            screen.blit(check_surf,coord_to_pixel(*self.king.get_pos()))
 
     def check_side(self):
         return self.side == self.sides[0].get_side()
@@ -369,18 +376,44 @@ WIDTH = 8
 ACTIVE_GAME = 0
 FIRST_PROMOTION = 1
 SECOND_PROMOTION = -1
+FIRST_TURN = 1
+SECOND_TURN = 0
 
 def coord_to_pixel(x,y):
     """Returns the pixel location of a provided coordinate"""
-    return (x*SQUARE_SIZE,y*SQUARE_SIZE)
+    #First display
+    if turn == FIRST_TURN:
+        return (x*SQUARE_SIZE,y*SQUARE_SIZE)
+    #Second display
+    new_x = abs(x-(WIDTH-1))
+    new_y = abs(y-(HEIGHT-1))
+    return (new_x*SQUARE_SIZE,new_y*SQUARE_SIZE)
+    
 
 def pixel_to_coord(x,y):
     """Returns the coordinate location of a provided pixel"""
-    return ((int)(x/SQUARE_SIZE),(int)(y/SQUARE_SIZE))
+    #First display
+    if turn == FIRST_TURN:
+        return ((int)(x/SQUARE_SIZE),(int)(y/SQUARE_SIZE))
+    #Second display
+    x = (int)(x/SQUARE_SIZE)
+    y = (int)(y/SQUARE_SIZE)
+    return (abs(x-(WIDTH-1)),abs(y-(HEIGHT-1)))
 
 def collide_point(group,x,y):
     """Returns a list of all pieces that collide with a coordinate"""
     return [piece for piece in group if piece.get_pos() == (x,y)]
+
+def toggle_turn():
+    """Toggles the turn of the game"""
+    global turn
+    if turn == FIRST_TURN:
+        turn = SECOND_TURN
+    else:
+        turn = FIRST_TURN
+    for side in Side.sides:
+        for piece in side:
+            piece.update_rect()
 
 #Screen and clock set up
 pygame.init()
@@ -390,6 +423,7 @@ clock = pygame.time.Clock()
 
 #Organization
 game_state = ACTIVE_GAME
+turn = FIRST_TURN
 
 #Background
 board_background = pygame.image.load('images/chess_board.png').convert()
@@ -470,22 +504,32 @@ while True:
 
 
     if game_state == ACTIVE_GAME:
-        #Draw and update the screen
+        #Draw background
         screen.blit(board_background, (0,0))
-
-        first_pieces.update(events)
-        game_state = first_pieces.get_info()
-        first_pieces.group_draw()
+        #Update pieces
+        if turn == FIRST_TURN:
+            first_pieces.update(events)
+            game_state = first_pieces.get_info()
+            first_pieces.draw_check()
+            second_pieces.draw_last_move()
+        else:
+            second_pieces.update(events)
+            game_state = second_pieces.get_info()
+            second_pieces.draw_check()
+            first_pieces.draw_last_move()
+        #Draw pieces
         first_pieces.draw(screen)
-        
-        second_pieces.update(events)
-        second_pieces.get_info()
-        second_pieces.group_draw()
         second_pieces.draw(screen)
+
     elif game_state == FIRST_PROMOTION:
         screen.blit(first_promote_surf,coord_to_pixel(*first_pieces.get_last_move()[2]))
     elif game_state == SECOND_PROMOTION:
         screen.blit(second_promote_surf,coord_to_pixel(*second_pieces.get_last_move()[2]))
+
+    #Check to alter turn
+    if Side.move_made and game_state == ACTIVE_GAME:
+        toggle_turn()
+        Side.move_made = False
 
     pygame.display.update()
     clock.tick(60)
