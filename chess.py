@@ -319,11 +319,17 @@ class Side(pygame.sprite.Group):
 
     def get_info(self):
         """Retrieve important info from pieces to see what is 
-        available"""  
+        available"""
+        #Track total moves possible
+        pos_moves = 0
+        #Go through every piece to get info  
         for piece in self:
+            pos_moves += len(piece.get_move_locs())
+            #Piece just moved, get the move spaces
             if piece.get_just_moved():
                 self.last_move = piece.get_move_info()
                 Side.move_made = True
+                #Check for promotion
                 if piece.type == 'pawn' and (piece.get_pos()[1] == 0 or 
                                              piece.get_pos()[1] == 7):
                     piece.kill()
@@ -331,6 +337,12 @@ class Side(pygame.sprite.Group):
                         return FIRST_PROMOTION
                     else:
                         return SECOND_PROMOTION
+        #Check for checkmate and stalemate
+        if pos_moves == 0:
+            if self.test_if_check():
+                return CHECKMATE
+            else:
+                return STALEMATE
         return ACTIVE_GAME
 
     def draw_check(self):
@@ -376,6 +388,8 @@ WIDTH = 8
 ACTIVE_GAME = 0
 FIRST_PROMOTION = 1
 SECOND_PROMOTION = -1
+CHECKMATE = 2
+STALEMATE = 3
 FIRST_TURN = 1
 SECOND_TURN = 0
 
@@ -424,6 +438,7 @@ clock = pygame.time.Clock()
 #Organization
 game_state = ACTIVE_GAME
 turn = FIRST_TURN
+show_end_screen = True
 
 #Background
 board_background = pygame.image.load('images/chess_board.png').convert()
@@ -433,6 +448,10 @@ avail_move_surf = pygame.image.load('images/avail_move.png').convert_alpha()
 last_move_surf = pygame.image.load('images/last_move.png').convert_alpha()
 
 check_surf = pygame.image.load('images/check.png').convert_alpha()
+
+checkmate_surf = pygame.image.load('images/checkmate_screen.png').convert()
+
+draw_surf = pygame.image.load('images/draw_screen.png').convert()
 
 #White pieces set up
 first_pieces = Side('white', Rook((0,7)),Knight((1,7)),
@@ -500,7 +519,34 @@ while True:
                     if coord[1] == promote_coord[1]-3:
                         second_pieces.add(Rook(promote_coord,has_moved=True))
                         game_state = ACTIVE_GAME
-
+        elif game_state == CHECKMATE or game_state == STALEMATE:
+            if event.type == pygame.KEYUP:
+                #Toggle showing end screen
+                if event.key == pygame.K_b:
+                    show_end_screen = not show_end_screen
+                #Reset game
+                elif event.key == pygame.K_SPACE:
+                    #Reset game state trackers
+                    game_state = ACTIVE_GAME
+                    turn = FIRST_TURN
+                    show_end_screen = True
+                    #Reset sides and pieces
+                    Side.sides = []
+                    Side.move_made = False
+                    #White pieces set up
+                    first_pieces = Side('white', Rook((0,7)),Knight((1,7)),
+                                        Bishop((2,7)),Queen((3,7)),
+                                        King((4,7)),Rook((7,7)),
+                                        Knight((6,7)),Bishop((5,7)))
+                    for x in range(8):
+                        first_pieces.add(Pawn((x,6)))
+                    #Black pieces set up
+                    second_pieces = Side('black', Rook((0,0)),Knight((1,0)),
+                                        Bishop((2,0)),Queen((3,0)),
+                                        King((4,0)),Rook((7,0)),
+                                        Knight((6,0)),Bishop((5,0)))
+                    for x in range(8):
+                        second_pieces.add(Pawn((x,1)))
 
 
     if game_state == ACTIVE_GAME:
@@ -525,6 +571,20 @@ while True:
         screen.blit(first_promote_surf,coord_to_pixel(*first_pieces.get_last_move()[2]))
     elif game_state == SECOND_PROMOTION:
         screen.blit(second_promote_surf,coord_to_pixel(*second_pieces.get_last_move()[2]))
+    elif game_state == CHECKMATE:
+        screen.blit(board_background, (0,0))
+        if show_end_screen:
+            screen.blit(checkmate_surf, (160,160))
+        else:
+            first_pieces.draw(screen)
+            second_pieces.draw(screen)
+    elif game_state == STALEMATE:
+        screen.blit(board_background, (0,0))
+        if show_end_screen:
+            screen.blit(draw_surf,(160,160))
+        else:
+            first_pieces.draw(screen)
+            second_pieces.draw(screen)
 
     #Check to alter turn
     if Side.move_made and game_state == ACTIVE_GAME:
