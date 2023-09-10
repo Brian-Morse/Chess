@@ -21,11 +21,23 @@ class Piece(pygame.sprite.Sprite):
         self.image = pygame.image.load(f'images/{side}_{self.type}.png').convert_alpha()
         self.rect = self.image.get_rect(topleft = coord_to_pixel(*self.pos))
 
+    def set_pos(self, new_pos):
+        """Sets the position of the piece"""
+        self.pos = new_pos
+
     def check_side(self):
         return self.side == self.sides[0].get_side()
 
     def get_type(self):
         return self.type
+
+    def get_has_moved(self):
+        """Return the status of if this piece has moved"""
+        return self.has_moved
+
+    def toggle_has_moved(self):
+        """Toggles the has moved attribute"""
+        self.has_moved = not self.has_moved
 
     def get_pos(self):
         return self.pos
@@ -278,6 +290,21 @@ class King(Piece):
         super().__init__('king',pos,has_moved)
         #Set up the king moves
         self.dirs = [(1,1),(-1,-1),(1,-1),(-1,1),(1,0),(-1,0),(0,1),(0,-1)]
+    
+    def get_move_locs(self):
+        """Get all the moves for the king"""
+        moves = super().get_move_locs()
+        if self.check_side():
+            if self.sides[0].can_short_castle():
+                moves.append((self.pos[0]+2,self.pos[1]))
+            if self.sides[0].can_long_castle():
+                moves.append((self.pos[0]-2,self.pos[1]))
+        else:
+            if self.sides[1].can_short_castle():
+                moves.append((self.pos[0]+2,self.pos[1]))
+            if self.sides[1].can_long_castle():
+                moves.append((self.pos[0]-2,self.pos[1]))
+        return moves
 
 class Side(pygame.sprite.Group):
     """Group class to hold a player's pieces"""
@@ -293,7 +320,6 @@ class Side(pygame.sprite.Group):
         self.sides.append(self)
         #Now do the normal initialization to add sprites to the group
         super().__init__(*sprites)
-        self.enpassant = []
         self.last_move = ()
         for piece in self:
             if piece.get_type() == 'king':
@@ -304,6 +330,55 @@ class Side(pygame.sprite.Group):
         super().add(*sprites)
         for sprite in sprites:
             sprite.set_side(self.side,self.sides)
+
+    def can_short_castle(self):
+        """Check if short castling is a possible move, true if so"""
+        #Get king position
+        x,y = self.king.get_pos()
+        #Make sure the king is not in check and has not moved
+        if not self.king.get_has_moved() and not self.test_if_check():
+            #Make sure the spaces next to king is empty
+            if (not ([piece for piece in self if piece.get_pos() == (x+1, y)] 
+                or [piece for piece in self if piece.get_pos() == (x+2,y)])):
+                #Make sure the rook is there and has not moved
+                if [piece for piece in self if piece.get_pos() == (x+3, y) and piece.get_type() == 'rook' and not piece.get_has_moved()]:
+                    #Make sure one space will not put king in check
+                    self.king.set_pos((x+1,y))
+                    if not self.test_if_check():
+                        #Make sure final space will not put king in check
+                        self.king.set_pos((x+2,y))
+                        if not self.test_if_check():
+                            #Return king to space
+                            self.king.set_pos((x,y))
+                            return True
+        #Return king to space
+        self.king.set_pos((x,y))
+        return False
+    
+    def can_long_castle(self):
+        """Check if long castling is a possible move, true if so"""
+        #Get king position
+        x,y = self.king.get_pos()
+        #Make sure the king is not in check and has not moved
+        if not self.king.get_has_moved() and not self.test_if_check():
+            #Make sure the spaces next to king is empty
+            if (not ([piece for piece in self if piece.get_pos() == (x-1, y)] 
+                or [piece for piece in self if piece.get_pos() == (x-2,y)]
+                or [piece for piece in self if piece.get_pos() == (x-3,y)])):
+                #Make sure the rook is there and has not moved
+                if [piece for piece in self if piece.get_pos() == (x-4, y) and piece.get_type() == 'rook' and not piece.get_has_moved()]:
+                    #Make sure one space will not put king in check
+                    self.king.set_pos((x-1,y))
+                    if not self.test_if_check():
+                        #Make sure final space will not put king in check
+                        self.king.set_pos((x-2,y))
+                        if not self.test_if_check():
+                            #Return king to space
+                            self.king.set_pos((x,y))
+                            return True
+        #Return king to space
+        self.king.set_pos((x,y))
+        return False
 
     def get_side(self):
         """Returns the side of this team"""
@@ -330,13 +405,45 @@ class Side(pygame.sprite.Group):
                 self.last_move = piece.get_move_info()
                 Side.move_made = True
                 #Check for promotion
-                if piece.type == 'pawn' and (piece.get_pos()[1] == 0 or 
+                if piece.get_type() == 'pawn' and (piece.get_pos()[1] == 0 or 
                                              piece.get_pos()[1] == 7):
                     piece.kill()
                     if self.check_side():
                         return FIRST_PROMOTION
                     else:
                         return SECOND_PROMOTION
+                #Check for short castling
+                if (piece.get_type() == 'king' and 
+                    self.last_move[2][0] - self.last_move[1][0] == 2):
+                    if self.check_side():
+                        mov_rook = [rook for rook in self 
+                                    if rook.get_pos() == (7,7)]
+                        mov_rook[0].set_pos((5,7))
+                        mov_rook[0].toggle_has_moved()
+                        mov_rook[0].update_rect()
+                    else:
+                        mov_rook = [rook for rook in self 
+                                    if rook.get_pos() == (7,0)]
+                        mov_rook[0].set_pos((5,0))
+                        mov_rook[0].toggle_has_moved()
+                        mov_rook[0].update_rect()
+                #Check for long castling
+                if (piece.get_type() == 'king' and 
+                    self.last_move[2][0] - self.last_move[1][0] == -2):
+                    if self.check_side():
+                        mov_rook = [rook for rook in self 
+                                    if rook.get_pos() == (0,7)]
+                        mov_rook[0].set_pos((3,7))
+                        mov_rook[0].toggle_has_moved()
+                        mov_rook[0].update_rect()
+                    else:
+                        mov_rook = [rook for rook in self 
+                                    if rook.get_pos() == (0,0)]
+                        mov_rook[0].set_pos((3,0))
+                        mov_rook[0].toggle_has_moved()
+                        mov_rook[0].update_rect()
+
+
         #Check for checkmate and stalemate
         if pos_moves == 0:
             if self.test_if_check():
