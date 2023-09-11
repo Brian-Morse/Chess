@@ -592,7 +592,32 @@ while True:
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
-        if game_state == FIRST_PROMOTION:
+        if game_state == ACTIVE_GAME:
+            if event.type == pygame.KEYUP:
+                #Reset game
+                if event.key == pygame.K_r:
+                    #Reset game state trackers
+                    game_state = ACTIVE_GAME
+                    turn = FIRST_TURN
+                    show_end_screen = True
+                    #Reset sides and pieces
+                    Side.sides = []
+                    Side.move_made = False
+                    #White pieces set up
+                    first_pieces = Side('white', Rook((0,7)),Knight((1,7)),
+                                        Bishop((2,7)),Queen((3,7)),
+                                        King((4,7)),Rook((7,7)),
+                                        Knight((6,7)),Bishop((5,7)))
+                    for x in range(8):
+                        first_pieces.add(Pawn((x,6)))
+                    #Black pieces set up
+                    second_pieces = Side('black', Rook((0,0)),Knight((1,0)),
+                                        Bishop((2,0)),Queen((3,0)),
+                                        King((4,0)),Rook((7,0)),
+                                        Knight((6,0)),Bishop((5,0)))
+                    for x in range(8):
+                        second_pieces.add(Pawn((x,1)))
+        elif game_state == FIRST_PROMOTION:
             if event.type == pygame.MOUSEBUTTONUP:
                 coord = pixel_to_coord(*event.pos)
                 promote_coord = first_pieces.get_last_move()[2]
