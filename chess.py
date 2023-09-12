@@ -10,6 +10,7 @@ class Piece(pygame.sprite.Sprite):
         self.pos = pos
         self.prev_pos = (0,0)
         self.just_moved = False
+        self.has_moved_before = has_moved
         self.has_moved = has_moved
         self.dirs = []
         self.range = 1
@@ -138,7 +139,7 @@ class Piece(pygame.sprite.Sprite):
     def get_move_info(self):
         """Get the info for the move this piece just made"""
         self.just_moved = False
-        return (self.type,self.prev_pos,self.pos)
+        return (self.type,self.prev_pos,self.pos,self.has_moved_before)
 
     def update_rect(self):
         self.rect.topleft = coord_to_pixel(*self.pos)
@@ -161,6 +162,7 @@ class Piece(pygame.sprite.Sprite):
                                 self.prev_pos = self.pos
                                 self.pos = event_pos
                                 self.rect.topleft = coord_to_pixel(*self.pos)
+                                self.has_moved_before = self.has_moved
                                 self.has_moved = True
                                 self.just_moved = True
                                 if self.check_side():
@@ -228,6 +230,12 @@ class Pawn(Piece):
                                           self.pos[1]-2)):
                     
                     possible_moves.append((self.pos[0],self.pos[1]-2))
+            #Check if pawn can lower en passant
+            if self.sides[0].can_lower_en_passant(self):
+                possible_moves.append((self.pos[0]-1, self.pos[1]-1))
+            #Check if pawn can higher en passant
+            if self.sides[0].can_higher_en_passant(self):
+                possible_moves.append((self.pos[0]+1, self.pos[1]-1))
         else:
             #Checks if there are diagonal points to capture
             for move in pressure:
@@ -246,7 +254,62 @@ class Pawn(Piece):
                     and not collide_point(self.sides[0], self.pos[0],
                                           self.pos[1]+2)):
                     possible_moves.append((self.pos[0],self.pos[1]+2))
+                #Check if pawn can lower en passant
+                if self.sides[1].can_lower_en_passant(self):
+                    possible_moves.append((self.pos[0]-1, self.pos[1]+1))
+                #Check if pawn can higher en passant
+                if self.sides[1].can_higher_en_passant(self):
+                    possible_moves.append((self.pos[0]+1, self.pos[1]+1))
         return possible_moves
+
+    def update(self, events):
+        """Update the pawn action and visual"""
+        if events:
+            for event in events:
+                if event.type == pygame.MOUSEBUTTONUP:
+                    event_pos = pixel_to_coord(*event.pos)
+                    #This piece is already clicked
+                    if self.is_clicked:
+                        #Clicking the same piece
+                        if self.pos == event_pos:
+                            self.is_clicked = True
+                        #Check for other possibilities and take action
+                        else:
+                            self.is_clicked = False
+                            if event_pos in self.get_move_locs():
+                                self.prev_pos = self.pos
+                                self.pos = event_pos
+                                self.rect.topleft = coord_to_pixel(*self.pos)
+                                self.has_moved_before = self.has_moved
+                                self.has_moved = True
+                                self.just_moved = True
+                                if self.check_side():
+                                    if not pygame.sprite.spritecollide(self, 
+                                                                self.sides[1], 
+                                                                dokill = True):
+                                        for pawn in [piece for piece in
+                                                self.sides[1] if 
+                                                piece.get_pos() == 
+                                                (self.pos[0],self.pos[1]+1)]:
+                                            pawn.kill()
+                                else:
+                                    if not pygame.sprite.spritecollide(self,
+                                                                self.sides[0],
+                                                                dokill=True):
+                                        for pawn in [piece for piece in
+                                                self.sides[0] if 
+                                                piece.get_pos() == 
+                                                (self.pos[0],self.pos[1]-1)]:
+                                            pawn.kill()
+                    else:
+                        #See if the piece is being clicked for the first time
+                        if self.pos == event_pos:
+                            self.is_clicked = True
+
+        if self.is_clicked:
+            #Visual continuance
+            screen.blit(avail_move_surf,coord_to_pixel(*self.pos))
+            self.show_moves()
 
 class Knight(Piece):
     """A knight chess piece, moves in Ls"""
@@ -378,6 +441,54 @@ class Side(pygame.sprite.Group):
                             return True
         #Return king to space
         self.king.set_pos((x,y))
+        return False
+
+    def can_lower_en_passant(self, pawn):
+        """Check if pawn can en passant into a lower x position"""
+        #Get pawn position
+        x,y = pawn.get_pos()
+        #Check which side is being dealt with
+        if self.check_side():
+            #Check if pawn is at right y position and there is a lower position
+            if y == 3 and x != 0:
+                #Check if a pawn just moved double space
+                other_move = self.sides[1].get_last_move()
+                if (other_move[0] == 'pawn' and other_move[1][1] == 1 and 
+                    other_move[2] == (x-1, y)):
+                    return True
+        else:
+            #Check if pawn is at right y position and there is a lower position
+            if y == 4 and x != 0:
+                #Check if a pawn just moved double space
+                other_move = self.sides[0].get_last_move()
+                if (other_move[0] == 'pawn' and other_move[1][1] == 6 and 
+                    other_move[2] == (x-1, y)):
+                    return True
+        #Can't lower en passant
+        return False
+    
+    def can_higher_en_passant(self, pawn):
+        """Check if pawn can en passant into a higher x position"""
+        #Get pawn position
+        x,y = pawn.get_pos()
+        #Check which side is being dealt with
+        if self.check_side():
+            #Check if pawn is at right y position and there is a higher position
+            if y == 3 and x != 7:
+                #Check if a pawn just moved double space
+                other_move = self.sides[1].get_last_move()
+                if (other_move[0] == 'pawn' and other_move[1][1] == 1 and 
+                    other_move[2] == (x+1, y)):
+                    return True
+        else:
+            #Check if pawn is at right y position and there is a higher position
+            if y == 4 and x != 7:
+                #Check if a pawn just moved double space
+                other_move = self.sides[0].get_last_move()
+                if (other_move[0] == 'pawn' and other_move[1][1] == 6 and 
+                    other_move[2] == (x+1, y)):
+                    return True
+        #Can't higher en passant
         return False
 
     def get_side(self):
