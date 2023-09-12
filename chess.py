@@ -26,6 +26,10 @@ class Piece(pygame.sprite.Sprite):
         """Sets the position of the piece"""
         self.pos = new_pos
 
+    def set_is_clicked(self, new_value):
+        """Sets the is clicked value of the piece"""
+        self.is_clicked = new_value
+
     def check_side(self):
         return self.side == self.sides[0].get_side()
 
@@ -646,6 +650,7 @@ def toggle_turn():
     for side in Side.sides:
         for piece in side:
             piece.update_rect()
+            piece.set_is_clicked(False)
 
 #Screen and clock set up
 pygame.init()
