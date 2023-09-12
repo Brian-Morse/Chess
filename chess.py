@@ -26,10 +26,6 @@ class Piece(pygame.sprite.Sprite):
         """Sets the position of the piece"""
         self.pos = new_pos
 
-    def set_is_clicked(self, new_value):
-        """Sets the is clicked value of the piece"""
-        self.is_clicked = new_value
-
     def check_side(self):
         return self.side == self.sides[0].get_side()
 
@@ -650,7 +646,6 @@ def toggle_turn():
     for side in Side.sides:
         for piece in side:
             piece.update_rect()
-            piece.set_is_clicked(False)
 
 #Screen and clock set up
 pygame.init()
@@ -696,10 +691,6 @@ for x in range(8):
 
 second_promote_surf = second_pieces.get_promote_image()
 
-
-# white_pieces.add(Pawn('white',(4,2)))
-# white_pieces.add(Pawn('white',(4,3)))
-
 #Game loop
 while True:
     #Event loop
@@ -741,6 +732,7 @@ while True:
                     if coord[1] == promote_coord[1]:
                         first_pieces.add(Queen(promote_coord,has_moved=True))
                         game_state = ACTIVE_GAME
+                        event.pos = (-1,-1)
                     if coord[1] == promote_coord[1]+1:
                         first_pieces.add(Bishop(promote_coord,has_moved=True))
                         game_state = ACTIVE_GAME
@@ -758,6 +750,7 @@ while True:
                     if coord[1] == promote_coord[1]:
                         second_pieces.add(Queen(promote_coord,has_moved=True))
                         game_state = ACTIVE_GAME
+                        event.pos = (-1,-1)
                     if coord[1] == promote_coord[1]-1:
                         second_pieces.add(Bishop(promote_coord,has_moved=True))
                         game_state = ACTIVE_GAME
