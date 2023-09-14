@@ -826,6 +826,11 @@ while True:
                     #Reset sides and pieces
                     Side.sides = []
                     Side.move_made = False
+                    Side.moves = []
+                    Side.move_count = 0
+                    Side.dead_pieces = []
+                    Side.created_pieces = []
+
                     #White pieces set up
                     first_pieces = Side('white', Rook((0,7)),Knight((1,7)),
                                         Bishop((2,7)),Queen((3,7)),
@@ -970,6 +975,10 @@ while True:
                     #Reset sides and pieces
                     Side.sides = []
                     Side.move_made = False
+                    Side.moves = []
+                    Side.move_count = 0
+                    Side.dead_pieces = []
+                    Side.created_pieces = []
                     #White pieces set up
                     first_pieces = Side('white', Rook((0,7)),Knight((1,7)),
                                         Bishop((2,7)),Queen((3,7)),
