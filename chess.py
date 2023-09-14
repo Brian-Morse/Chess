@@ -26,6 +26,10 @@ class Piece(pygame.sprite.Sprite):
         """Sets the position of the piece"""
         self.pos = new_pos
 
+    def set_is_clicked(self, new_value):
+        """Sets the is clicked attribute of this piece"""
+        self.is_clicked = new_value
+
     def check_side(self):
         return self.side == self.sides[0].get_side()
 
@@ -36,9 +40,9 @@ class Piece(pygame.sprite.Sprite):
         """Return the status of if this piece has moved"""
         return self.has_moved
 
-    def toggle_has_moved(self):
-        """Toggles the has moved attribute"""
-        self.has_moved = not self.has_moved
+    def set_has_moved(self, new_value):
+        """Sets the has moved attribute"""
+        self.has_moved = new_value
 
     def get_pos(self):
         return self.pos
@@ -139,7 +143,7 @@ class Piece(pygame.sprite.Sprite):
     def get_move_info(self):
         """Get the info for the move this piece just made"""
         self.just_moved = False
-        return (self.type,self.prev_pos,self.pos,self.has_moved_before)
+        return (self,self.prev_pos,self.pos,self.has_moved_before)
 
     def update_rect(self):
         self.rect.topleft = coord_to_pixel(*self.pos)
@@ -166,13 +170,18 @@ class Piece(pygame.sprite.Sprite):
                                 self.has_moved = True
                                 self.just_moved = True
                                 if self.check_side():
-                                    pygame.sprite.spritecollide(self, 
-                                                                self.sides[1], 
-                                                                dokill = True)
+                                    collide = pygame.sprite.spritecollide(self, 
+                                                                self.sides[1],False)
+                                    self.sides[1].remove(collide)
+                                    for piece in collide:
+                                        Side.dead_pieces.append((piece,Side.move_count))
                                 else:
-                                    pygame.sprite.spritecollide(self,
+                                    collide = pygame.sprite.spritecollide(self,
                                                                 self.sides[0],
-                                                                dokill=True)
+                                                                False)
+                                    self.sides[0].remove(collide)
+                                    for piece in collide:
+                                        Side.dead_pieces.append((piece,Side.move_count))
                     else:
                         #See if the piece is being clicked for the first time
                         if self.pos == event_pos:
@@ -284,23 +293,35 @@ class Pawn(Piece):
                                 self.has_moved = True
                                 self.just_moved = True
                                 if self.check_side():
-                                    if not pygame.sprite.spritecollide(self, 
+                                    collide = pygame.sprite.spritecollide(self, 
                                                                 self.sides[1], 
-                                                                dokill = True):
+                                                                False)
+                                    if not collide:
                                         for pawn in [piece for piece in
                                                 self.sides[1] if 
                                                 piece.get_pos() == 
                                                 (self.pos[0],self.pos[1]+1)]:
-                                            pawn.kill()
+                                            self.sides[1].remove(pawn)
+                                            Side.dead_pieces.append((pawn,Side.move_count))
+                                    else:
+                                        self.sides[1].remove(collide)
+                                        for piece in collide:
+                                            Side.dead_pieces.append((piece,Side.move_count))
                                 else:
-                                    if not pygame.sprite.spritecollide(self,
+                                    collide = pygame.sprite.spritecollide(self,
                                                                 self.sides[0],
-                                                                dokill=True):
+                                                                False)
+                                    if not collide:
                                         for pawn in [piece for piece in
                                                 self.sides[0] if 
                                                 piece.get_pos() == 
                                                 (self.pos[0],self.pos[1]-1)]:
-                                            pawn.kill()
+                                            self.sides[0].remove(pawn)
+                                            Side.dead_pieces.append((pawn,Side.move_count))
+                                    else:
+                                        self.sides[0].remove(collide)
+                                        for piece in collide:
+                                            Side.dead_pieces.append((piece,Side.move_count))
                     else:
                         #See if the piece is being clicked for the first time
                         if self.pos == event_pos:
@@ -375,6 +396,10 @@ class Side(pygame.sprite.Group):
     #Collection of sides
     sides = []
     move_made = False
+    dead_pieces = []
+    created_pieces = []
+    moves = []
+    move_count = 0
 
     def __init__(self, side, *sprites: Piece):
         """Initializes group variables to track game"""
@@ -453,16 +478,16 @@ class Side(pygame.sprite.Group):
             if y == 3 and x != 0:
                 #Check if a pawn just moved double space
                 other_move = self.sides[1].get_last_move()
-                if (other_move[0] == 'pawn' and other_move[1][1] == 1 and 
-                    other_move[2] == (x-1, y)):
+                if (other_move[0].get_type() == 'pawn' and 
+                    other_move[1][1] == 1 and other_move[2] == (x-1, y)):
                     return True
         else:
             #Check if pawn is at right y position and there is a lower position
             if y == 4 and x != 0:
                 #Check if a pawn just moved double space
                 other_move = self.sides[0].get_last_move()
-                if (other_move[0] == 'pawn' and other_move[1][1] == 6 and 
-                    other_move[2] == (x-1, y)):
+                if (other_move[0].get_type() == 'pawn' and 
+                    other_move[1][1] == 6 and other_move[2] == (x-1, y)):
                     return True
         #Can't lower en passant
         return False
@@ -477,16 +502,16 @@ class Side(pygame.sprite.Group):
             if y == 3 and x != 7:
                 #Check if a pawn just moved double space
                 other_move = self.sides[1].get_last_move()
-                if (other_move[0] == 'pawn' and other_move[1][1] == 1 and 
-                    other_move[2] == (x+1, y)):
+                if (other_move[0].get_type() == 'pawn' and 
+                    other_move[1][1] == 1 and other_move[2] == (x+1, y)):
                     return True
         else:
             #Check if pawn is at right y position and there is a higher position
             if y == 4 and x != 7:
                 #Check if a pawn just moved double space
                 other_move = self.sides[0].get_last_move()
-                if (other_move[0] == 'pawn' and other_move[1][1] == 6 and 
-                    other_move[2] == (x+1, y)):
+                if (other_move[0].get_type() == 'pawn' and 
+                    other_move[1][1] == 6 and other_move[2] == (x+1, y)):
                     return True
         #Can't higher en passant
         return False
@@ -498,6 +523,10 @@ class Side(pygame.sprite.Group):
     def get_last_move(self):
         """Returns the last move"""
         return self.last_move
+
+    def set_last_move(self, new_last_move):
+        """Sets the last move of this side"""
+        self.last_move = new_last_move
 
     def get_promote_image(self):
         """Gives the image for the promotion of this side"""
@@ -514,14 +543,19 @@ class Side(pygame.sprite.Group):
             #Piece just moved, get the move spaces
             if piece.get_just_moved():
                 self.last_move = piece.get_move_info()
+                Side.moves.append(self.last_move)
+                Side.move_count += 1
                 Side.move_made = True
                 #Check for promotion
                 if piece.get_type() == 'pawn' and (piece.get_pos()[1] == 0 or 
                                              piece.get_pos()[1] == 7):
-                    piece.kill()
                     if self.check_side():
+                        self.sides[0].remove(piece)
+                        Side.dead_pieces.append((piece,Side.move_count-1))
                         return FIRST_PROMOTION
                     else:
+                        self.sides[1].remove(piece)
+                        Side.dead_pieces.append((piece,Side.move_count-1))
                         return SECOND_PROMOTION
                 #Check for short castling
                 if (piece.get_type() == 'king' and 
@@ -530,13 +564,13 @@ class Side(pygame.sprite.Group):
                         mov_rook = [rook for rook in self 
                                     if rook.get_pos() == (7,7)]
                         mov_rook[0].set_pos((5,7))
-                        mov_rook[0].toggle_has_moved()
+                        mov_rook[0].set_has_moved(True)
                         mov_rook[0].update_rect()
                     else:
                         mov_rook = [rook for rook in self 
                                     if rook.get_pos() == (7,0)]
                         mov_rook[0].set_pos((5,0))
-                        mov_rook[0].toggle_has_moved()
+                        mov_rook[0].set_has_moved(True)
                         mov_rook[0].update_rect()
                 #Check for long castling
                 if (piece.get_type() == 'king' and 
@@ -545,13 +579,13 @@ class Side(pygame.sprite.Group):
                         mov_rook = [rook for rook in self 
                                     if rook.get_pos() == (0,7)]
                         mov_rook[0].set_pos((3,7))
-                        mov_rook[0].toggle_has_moved()
+                        mov_rook[0].set_has_moved(True)
                         mov_rook[0].update_rect()
                     else:
                         mov_rook = [rook for rook in self 
                                     if rook.get_pos() == (0,0)]
                         mov_rook[0].set_pos((3,0))
-                        mov_rook[0].toggle_has_moved()
+                        mov_rook[0].set_has_moved(True)
                         mov_rook[0].update_rect()
 
 
@@ -598,6 +632,81 @@ class Side(pygame.sprite.Group):
                     return True
         return False
 
+    @staticmethod
+    def undo_move():
+        """Undoes the last move of the game"""
+        if Side.moves:
+            #Unclick all of the pieces
+            for side in Side.sides:
+                for piece in side:
+                    piece.set_is_clicked(False)
+            #Get the move info that needs to be reversed and new number of moves
+            undid_move = Side.moves.pop()
+            Side.move_count -= 1
+            #Move the piece back to its old spot and set the has moved attribute
+            undid_move[0].set_pos(undid_move[1])
+            undid_move[0].set_has_moved(undid_move[3])
+            #Check if rook needs to be moved back due to short castling
+            if (undid_move[0].get_type() == 'king' and 
+                undid_move[2][0] - undid_move[1][0] == 2):
+                if undid_move[0].check_side():
+                    mov_rook = [rook for rook in Side.sides[0] 
+                                if rook.get_pos() == (5,7)]
+                    mov_rook[0].set_pos((7,7))
+                    mov_rook[0].set_has_moved(False)
+                    mov_rook[0].update_rect()
+                else:
+                    mov_rook = [rook for rook in Side.sides[1] 
+                                if rook.get_pos() == (5,0)]
+                    mov_rook[0].set_pos((7,0))
+                    mov_rook[0].set_has_moved(False)
+                    mov_rook[0].update_rect()
+            #Check if rook needs to be moved back due to long castling
+            if (undid_move[0].get_type() == 'king' and 
+                undid_move[2][0] - undid_move[1][0] == -2):
+                    if undid_move[0].check_side():
+                        mov_rook = [rook for rook in Side.sides[0] 
+                                    if rook.get_pos() == (3,7)]
+                        mov_rook[0].set_pos((0,7))
+                        mov_rook[0].set_has_moved(False)
+                        mov_rook[0].update_rect()
+                    else:
+                        mov_rook = [rook for rook in Side.sides[1] 
+                                    if rook.get_pos() == (3,0)]
+                        mov_rook[0].set_pos((0,0))
+                        mov_rook[0].set_has_moved(False)
+                        mov_rook[0].update_rect()
+            #Correct the last move info
+            if undid_move[0].check_side():
+                if Side.move_count >= 2:
+                    Side.sides[0].set_last_move(Side.moves[-2])
+                else:
+                    Side.sides[0].set_last_move(())
+            else:
+                if Side.move_count >= 2:
+                    Side.sides[1].set_last_move(Side.moves[-2])
+                else:
+                    Side.sides[1].set_last_move(())
+            #Restore any captured pieces
+            to_restore = [piece for piece in Side.dead_pieces if piece[1] == Side.move_count]
+            for piece in to_restore:
+                Side.dead_pieces.remove(piece)
+                if piece[0].check_side():
+                    Side.sides[0].add(piece[0])
+                else:
+                    Side.sides[1].add(piece[0])
+            #Remove any promoted pieces that are no longer present
+            to_remove = [piece for piece in Side.created_pieces if piece[1] == Side.move_count]
+            for piece in to_remove:
+                Side.created_pieces.remove(piece)
+                if piece[0].check_side():
+                    Side.sides[0].remove(piece[0])
+                else:
+                    Side.sides[1].remove(piece[0])
+                piece[0].kill()
+            #Toggle the move
+            toggle_turn()
+
 
 #Constants
 SQUARE_SIZE = 80
@@ -621,7 +730,6 @@ def coord_to_pixel(x,y):
     new_y = abs(y-(HEIGHT-1))
     return (new_x*SQUARE_SIZE,new_y*SQUARE_SIZE)
     
-
 def pixel_to_coord(x,y):
     """Returns the coordinate location of a provided pixel"""
     #First display
@@ -724,23 +832,34 @@ while True:
                                         Knight((6,0)),Bishop((5,0)))
                     for x in range(8):
                         second_pieces.add(Pawn((x,1)))
+                #Undo move
+                elif event.key == pygame.K_u:
+                    Side.undo_move()
         elif game_state == FIRST_PROMOTION:
             if event.type == pygame.MOUSEBUTTONUP:
                 coord = pixel_to_coord(*event.pos)
                 promote_coord = first_pieces.get_last_move()[2]
                 if coord[0] == promote_coord[0]:
                     if coord[1] == promote_coord[1]:
-                        first_pieces.add(Queen(promote_coord,has_moved=True))
+                        piece = Queen(promote_coord,has_moved=True)
+                        first_pieces.add(piece)
+                        Side.created_pieces.append((piece,Side.move_count-1))
                         game_state = ACTIVE_GAME
                         event.pos = (-1,-1)
                     if coord[1] == promote_coord[1]+1:
-                        first_pieces.add(Bishop(promote_coord,has_moved=True))
+                        piece = Bishop(promote_coord,has_moved=True)
+                        first_pieces.add(piece)
+                        Side.created_pieces.append((piece,Side.move_count-1))
                         game_state = ACTIVE_GAME
                     if coord[1] == promote_coord[1]+2:
-                        first_pieces.add(Knight(promote_coord,has_moved=True))
+                        piece = Knight(promote_coord,has_moved=True)
+                        first_pieces.add(piece)
+                        Side.created_pieces.append((piece,Side.move_count-1))
                         game_state = ACTIVE_GAME
                     if coord[1] == promote_coord[1]+3:
-                        first_pieces.add(Rook(promote_coord,has_moved=True))
+                        piece = Rook(promote_coord,has_moved=True)
+                        first_pieces.add(piece)
+                        Side.created_pieces.append((piece,Side.move_count-1))
                         game_state = ACTIVE_GAME
         elif game_state == SECOND_PROMOTION:
             if event.type == pygame.MOUSEBUTTONUP:
@@ -748,17 +867,25 @@ while True:
                 promote_coord = second_pieces.get_last_move()[2]
                 if coord[0] == promote_coord[0]:
                     if coord[1] == promote_coord[1]:
-                        second_pieces.add(Queen(promote_coord,has_moved=True))
+                        piece = Queen(promote_coord,has_moved=True)
+                        second_pieces.add(piece)
+                        Side.created_pieces.append((piece,Side.move_count-1))
                         game_state = ACTIVE_GAME
                         event.pos = (-1,-1)
                     if coord[1] == promote_coord[1]-1:
-                        second_pieces.add(Bishop(promote_coord,has_moved=True))
+                        piece = Bishop(promote_coord,has_moved=True)
+                        second_pieces.add(piece)
+                        Side.created_pieces.append((piece,Side.move_count-1))
                         game_state = ACTIVE_GAME
                     if coord[1] == promote_coord[1]-2:
-                        second_pieces.add(Knight(promote_coord,has_moved=True))
+                        piece = Knight(promote_coord,has_moved=True)
+                        second_pieces.add(piece)
+                        Side.created_pieces.append((piece,Side.move_count-1))
                         game_state = ACTIVE_GAME
                     if coord[1] == promote_coord[1]-3:
-                        second_pieces.add(Rook(promote_coord,has_moved=True))
+                        piece = Rook(promote_coord,has_moved=True)
+                        second_pieces.add(piece)
+                        Side.created_pieces.append((piece,Side.move_count-1))
                         game_state = ACTIVE_GAME
         elif game_state == CHECKMATE or game_state == STALEMATE:
             if event.type == pygame.KEYUP:
