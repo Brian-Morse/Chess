@@ -719,11 +719,13 @@ CHECKMATE = 2
 STALEMATE = 3
 FIRST_TURN = 1
 SECOND_TURN = 0
+FIRST_PERSPECTIVE = FIRST_TURN
+SECOND_PERSPECTIVE = SECOND_TURN
 
 def coord_to_pixel(x,y):
     """Returns the pixel location of a provided coordinate"""
     #First display
-    if turn == FIRST_TURN:
+    if perspective == FIRST_PERSPECTIVE:
         return (x*SQUARE_SIZE,y*SQUARE_SIZE)
     #Second display
     new_x = abs(x-(WIDTH-1))
@@ -733,7 +735,7 @@ def coord_to_pixel(x,y):
 def pixel_to_coord(x,y):
     """Returns the coordinate location of a provided pixel"""
     #First display
-    if turn == FIRST_TURN:
+    if perspective == FIRST_PERSPECTIVE:
         return ((int)(x/SQUARE_SIZE),(int)(y/SQUARE_SIZE))
     #Second display
     x = (int)(x/SQUARE_SIZE)
@@ -746,11 +748,15 @@ def collide_point(group,x,y):
 
 def toggle_turn():
     """Toggles the turn of the game"""
-    global turn
+    global turn, perspective
     if turn == FIRST_TURN:
         turn = SECOND_TURN
+        if flip_screen:
+            perspective = SECOND_PERSPECTIVE
     else:
         turn = FIRST_TURN
+        if flip_screen:
+            perspective = FIRST_PERSPECTIVE
     for side in Side.sides:
         for piece in side:
             piece.update_rect()
@@ -765,6 +771,8 @@ clock = pygame.time.Clock()
 game_state = ACTIVE_GAME
 turn = FIRST_TURN
 show_end_screen = True
+flip_screen = True
+perspective = FIRST_PERSPECTIVE
 
 #Background
 board_background = pygame.image.load('images/chess_board.png').convert()
@@ -835,6 +843,17 @@ while True:
                 #Undo move
                 elif event.key == pygame.K_u:
                     Side.undo_move()
+                #Lock or release screen flipping
+                elif event.key == pygame.K_f:
+                    flip_screen = not flip_screen
+                    if flip_screen:
+                        if turn == FIRST_TURN:
+                            perspective = FIRST_PERSPECTIVE
+                        else:
+                            perspective = SECOND_PERSPECTIVE
+                        for side in Side.sides:
+                            for piece in side:
+                                piece.update_rect()
         elif game_state == FIRST_PROMOTION:
             if event.type == pygame.MOUSEBUTTONUP:
                 coord = pixel_to_coord(*event.pos)
