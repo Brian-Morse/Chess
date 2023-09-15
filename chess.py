@@ -857,55 +857,105 @@ while True:
         elif game_state == FIRST_PROMOTION:
             if event.type == pygame.MOUSEBUTTONUP:
                 coord = pixel_to_coord(*event.pos)
-                promote_coord = first_pieces.get_last_move()[2]
-                if coord[0] == promote_coord[0]:
-                    if coord[1] == promote_coord[1]:
-                        piece = Queen(promote_coord,has_moved=True)
-                        first_pieces.add(piece)
-                        Side.created_pieces.append((piece,Side.move_count-1))
-                        game_state = ACTIVE_GAME
-                        event.pos = (-1,-1)
-                    if coord[1] == promote_coord[1]+1:
-                        piece = Bishop(promote_coord,has_moved=True)
-                        first_pieces.add(piece)
-                        Side.created_pieces.append((piece,Side.move_count-1))
-                        game_state = ACTIVE_GAME
-                    if coord[1] == promote_coord[1]+2:
-                        piece = Knight(promote_coord,has_moved=True)
-                        first_pieces.add(piece)
-                        Side.created_pieces.append((piece,Side.move_count-1))
-                        game_state = ACTIVE_GAME
-                    if coord[1] == promote_coord[1]+3:
-                        piece = Rook(promote_coord,has_moved=True)
-                        first_pieces.add(piece)
-                        Side.created_pieces.append((piece,Side.move_count-1))
-                        game_state = ACTIVE_GAME
+                if perspective == FIRST_PERSPECTIVE:
+                    promote_coord = first_pieces.get_last_move()[2]
+                    if coord[0] == promote_coord[0]:
+                        if coord[1] == promote_coord[1]:
+                            piece = Queen(promote_coord,has_moved=True)
+                            first_pieces.add(piece)
+                            Side.created_pieces.append((piece,Side.move_count-1))
+                            game_state = ACTIVE_GAME
+                            event.pos = (-1,-1)
+                        if coord[1] == promote_coord[1]+1:
+                            piece = Bishop(promote_coord,has_moved=True)
+                            first_pieces.add(piece)
+                            Side.created_pieces.append((piece,Side.move_count-1))
+                            game_state = ACTIVE_GAME
+                        if coord[1] == promote_coord[1]+2:
+                            piece = Knight(promote_coord,has_moved=True)
+                            first_pieces.add(piece)
+                            Side.created_pieces.append((piece,Side.move_count-1))
+                            game_state = ACTIVE_GAME
+                        if coord[1] == promote_coord[1]+3:
+                            piece = Rook(promote_coord,has_moved=True)
+                            first_pieces.add(piece)
+                            Side.created_pieces.append((piece,Side.move_count-1))
+                            game_state = ACTIVE_GAME
+                else:
+                    promote_coord = first_pieces.get_last_move()[2]
+                    if coord[0] == promote_coord[0]:
+                        if coord[1] == promote_coord[1]+3:
+                            piece = Queen(promote_coord,has_moved=True)
+                            first_pieces.add(piece)
+                            Side.created_pieces.append((piece,Side.move_count-1))
+                            game_state = ACTIVE_GAME
+                        if coord[1] == promote_coord[1]+2:
+                            piece = Bishop(promote_coord,has_moved=True)
+                            first_pieces.add(piece)
+                            Side.created_pieces.append((piece,Side.move_count-1))
+                            game_state = ACTIVE_GAME
+                        if coord[1] == promote_coord[1]+1:
+                            piece = Knight(promote_coord,has_moved=True)
+                            first_pieces.add(piece)
+                            Side.created_pieces.append((piece,Side.move_count-1))
+                            game_state = ACTIVE_GAME
+                        if coord[1] == promote_coord[1]:
+                            piece = Rook(promote_coord,has_moved=True)
+                            first_pieces.add(piece)
+                            Side.created_pieces.append((piece,Side.move_count-1))
+                            game_state = ACTIVE_GAME
+                            event.pos = (-1,-1)
         elif game_state == SECOND_PROMOTION:
             if event.type == pygame.MOUSEBUTTONUP:
                 coord = pixel_to_coord(*event.pos)
-                promote_coord = second_pieces.get_last_move()[2]
-                if coord[0] == promote_coord[0]:
-                    if coord[1] == promote_coord[1]:
-                        piece = Queen(promote_coord,has_moved=True)
-                        second_pieces.add(piece)
-                        Side.created_pieces.append((piece,Side.move_count-1))
-                        game_state = ACTIVE_GAME
-                        event.pos = (-1,-1)
-                    if coord[1] == promote_coord[1]-1:
-                        piece = Bishop(promote_coord,has_moved=True)
-                        second_pieces.add(piece)
-                        Side.created_pieces.append((piece,Side.move_count-1))
-                        game_state = ACTIVE_GAME
-                    if coord[1] == promote_coord[1]-2:
-                        piece = Knight(promote_coord,has_moved=True)
-                        second_pieces.add(piece)
-                        Side.created_pieces.append((piece,Side.move_count-1))
-                        game_state = ACTIVE_GAME
-                    if coord[1] == promote_coord[1]-3:
-                        piece = Rook(promote_coord,has_moved=True)
-                        second_pieces.add(piece)
-                        Side.created_pieces.append((piece,Side.move_count-1))
-                        game_state = ACTIVE_GAME
+                if perspective == SECOND_PERSPECTIVE:
+                    promote_coord = second_pieces.get_last_move()[2]
+                    if coord[0] == promote_coord[0]:
+                        if coord[1] == promote_coord[1]:
+                            piece = Queen(promote_coord,has_moved=True)
+                            second_pieces.add(piece)
+                            Side.created_pieces.append((piece,Side.move_count-1))
+                            game_state = ACTIVE_GAME
+                            event.pos = (-1,-1)
+                        if coord[1] == promote_coord[1]-1:
+                            piece = Bishop(promote_coord,has_moved=True)
+                            second_pieces.add(piece)
+                            Side.created_pieces.append((piece,Side.move_count-1))
+                            game_state = ACTIVE_GAME
+                        if coord[1] == promote_coord[1]-2:
+                            piece = Knight(promote_coord,has_moved=True)
+                            second_pieces.add(piece)
+                            Side.created_pieces.append((piece,Side.move_count-1))
+                            game_state = ACTIVE_GAME
+                        if coord[1] == promote_coord[1]-3:
+                            piece = Rook(promote_coord,has_moved=True)
+                            second_pieces.add(piece)
+                            Side.created_pieces.append((piece,Side.move_count-1))
+                            game_state = ACTIVE_GAME
+                else:
+                    promote_coord = second_pieces.get_last_move()[2]
+                    if coord[0] == promote_coord[0]:
+                        if coord[1] == promote_coord[1]-3:
+                            piece = Queen(promote_coord,has_moved=True)
+                            second_pieces.add(piece)
+                            Side.created_pieces.append((piece,Side.move_count-1))
+                            game_state = ACTIVE_GAME
+                        if coord[1] == promote_coord[1]-2:
+                            piece = Bishop(promote_coord,has_moved=True)
+                            second_pieces.add(piece)
+                            Side.created_pieces.append((piece,Side.move_count-1))
+                            game_state = ACTIVE_GAME
+                        if coord[1] == promote_coord[1]-1:
+                            piece = Knight(promote_coord,has_moved=True)
+                            second_pieces.add(piece)
+                            Side.created_pieces.append((piece,Side.move_count-1))
+                            game_state = ACTIVE_GAME
+                        if coord[1] == promote_coord[1]:
+                            piece = Rook(promote_coord,has_moved=True)
+                            second_pieces.add(piece)
+                            Side.created_pieces.append((piece,Side.move_count-1))
+                            game_state = ACTIVE_GAME
+                            event.pos = (-1,-1)
         elif game_state == CHECKMATE or game_state == STALEMATE:
             if event.type == pygame.KEYUP:
                 #Toggle showing end screen
@@ -955,9 +1005,15 @@ while True:
         second_pieces.draw(screen)
 
     elif game_state == FIRST_PROMOTION:
-        screen.blit(first_promote_surf,coord_to_pixel(*first_pieces.get_last_move()[2]))
+        if perspective == FIRST_PERSPECTIVE:
+            screen.blit(first_promote_surf,coord_to_pixel(*first_pieces.get_last_move()[2]))
+        else:
+            screen.blit(first_promote_surf,coord_to_pixel(first_pieces.get_last_move()[2][0],first_pieces.get_last_move()[2][1]+3))
     elif game_state == SECOND_PROMOTION:
-        screen.blit(second_promote_surf,coord_to_pixel(*second_pieces.get_last_move()[2]))
+        if perspective == SECOND_PERSPECTIVE:
+            screen.blit(second_promote_surf,coord_to_pixel(*second_pieces.get_last_move()[2]))
+        else:
+            screen.blit(second_promote_surf,coord_to_pixel(second_pieces.get_last_move()[2][0],second_pieces.get_last_move()[2][1]-3))
     elif game_state == CHECKMATE:
         screen.blit(board_background, (0,0))
         if show_end_screen:
