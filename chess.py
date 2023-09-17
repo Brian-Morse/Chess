@@ -145,6 +145,25 @@ class Piece(pygame.sprite.Sprite):
         self.just_moved = False
         return (self,self.prev_pos,self.pos,self.has_moved_before)
 
+    def move(self, new_pos):
+        """Moves the piece to the new position"""
+        self.prev_pos = self.pos
+        self.pos = new_pos
+        self.rect.topleft = coord_to_pixel(*self.pos)
+        self.has_moved_before = self.has_moved
+        self.has_moved = True
+        self.just_moved = True
+        if self.check_side():
+            collide = pygame.sprite.spritecollide(self, self.sides[1], False)
+            self.sides[1].remove(collide)
+            for piece in collide:
+                Side.dead_pieces.append((piece,Side.move_count))
+        else:
+            collide = pygame.sprite.spritecollide(self,self.sides[0],False)
+            self.sides[0].remove(collide)
+            for piece in collide:
+                Side.dead_pieces.append((piece,Side.move_count))
+
     def update_rect(self):
         self.rect.topleft = coord_to_pixel(*self.pos)
 
@@ -163,25 +182,7 @@ class Piece(pygame.sprite.Sprite):
                         else:
                             self.is_clicked = False
                             if event_pos in self.get_move_locs():
-                                self.prev_pos = self.pos
-                                self.pos = event_pos
-                                self.rect.topleft = coord_to_pixel(*self.pos)
-                                self.has_moved_before = self.has_moved
-                                self.has_moved = True
-                                self.just_moved = True
-                                if self.check_side():
-                                    collide = pygame.sprite.spritecollide(self, 
-                                                                self.sides[1],False)
-                                    self.sides[1].remove(collide)
-                                    for piece in collide:
-                                        Side.dead_pieces.append((piece,Side.move_count))
-                                else:
-                                    collide = pygame.sprite.spritecollide(self,
-                                                                self.sides[0],
-                                                                False)
-                                    self.sides[0].remove(collide)
-                                    for piece in collide:
-                                        Side.dead_pieces.append((piece,Side.move_count))
+                                self.move(event_pos)
                     else:
                         #See if the piece is being clicked for the first time
                         if self.pos == event_pos:
@@ -271,66 +272,36 @@ class Pawn(Piece):
                     possible_moves.append((self.pos[0]+1, self.pos[1]+1))
         return possible_moves
 
-    def update(self, events):
-        """Update the pawn action and visual"""
-        if events:
-            for event in events:
-                if event.type == pygame.MOUSEBUTTONUP:
-                    event_pos = pixel_to_coord(*event.pos)
-                    #This piece is already clicked
-                    if self.is_clicked:
-                        #Clicking the same piece
-                        if self.pos == event_pos:
-                            self.is_clicked = True
-                        #Check for other possibilities and take action
-                        else:
-                            self.is_clicked = False
-                            if event_pos in self.get_move_locs():
-                                self.prev_pos = self.pos
-                                self.pos = event_pos
-                                self.rect.topleft = coord_to_pixel(*self.pos)
-                                self.has_moved_before = self.has_moved
-                                self.has_moved = True
-                                self.just_moved = True
-                                if self.check_side():
-                                    collide = pygame.sprite.spritecollide(self, 
-                                                                self.sides[1], 
-                                                                False)
-                                    if not collide:
-                                        for pawn in [piece for piece in
-                                                self.sides[1] if 
-                                                piece.get_pos() == 
-                                                (self.pos[0],self.pos[1]+1)]:
-                                            self.sides[1].remove(pawn)
-                                            Side.dead_pieces.append((pawn,Side.move_count))
-                                    else:
-                                        self.sides[1].remove(collide)
-                                        for piece in collide:
-                                            Side.dead_pieces.append((piece,Side.move_count))
-                                else:
-                                    collide = pygame.sprite.spritecollide(self,
-                                                                self.sides[0],
-                                                                False)
-                                    if not collide:
-                                        for pawn in [piece for piece in
-                                                self.sides[0] if 
-                                                piece.get_pos() == 
-                                                (self.pos[0],self.pos[1]-1)]:
-                                            self.sides[0].remove(pawn)
-                                            Side.dead_pieces.append((pawn,Side.move_count))
-                                    else:
-                                        self.sides[0].remove(collide)
-                                        for piece in collide:
-                                            Side.dead_pieces.append((piece,Side.move_count))
-                    else:
-                        #See if the piece is being clicked for the first time
-                        if self.pos == event_pos:
-                            self.is_clicked = True
-
-        if self.is_clicked:
-            #Visual continuance
-            screen.blit(avail_move_surf,coord_to_pixel(*self.pos))
-            self.show_moves()
+    def move(self, new_pos):
+        """Moves the pawn to the new position"""
+        self.prev_pos = self.pos
+        self.pos = new_pos
+        self.rect.topleft = coord_to_pixel(*self.pos)
+        self.has_moved_before = self.has_moved
+        self.has_moved = True
+        self.just_moved = True
+        if self.check_side():
+            collide = pygame.sprite.spritecollide(self, self.sides[1], False)
+            if not collide:
+                for pawn in [piece for piece in self.sides[1] if 
+                             piece.get_pos() == (self.pos[0],self.pos[1]+1)]:
+                    self.sides[1].remove(pawn)
+                    Side.dead_pieces.append((pawn,Side.move_count))
+            else:
+                self.sides[1].remove(collide)
+                for piece in collide:
+                    Side.dead_pieces.append((piece,Side.move_count))
+        else:
+            collide = pygame.sprite.spritecollide(self,self.sides[0],False)
+            if not collide:
+                for pawn in [piece for piece in self.sides[0] if 
+                             piece.get_pos() == (self.pos[0],self.pos[1]-1)]:
+                    self.sides[0].remove(pawn)
+                    Side.dead_pieces.append((pawn,Side.move_count))
+            else:
+                self.sides[0].remove(collide)
+                for piece in collide:
+                    Side.dead_pieces.append((piece,Side.move_count))
 
 class Knight(Piece):
     """A knight chess piece, moves in Ls"""
@@ -721,6 +692,58 @@ FIRST_TURN = 1
 SECOND_TURN = 0
 FIRST_PERSPECTIVE = FIRST_TURN
 SECOND_PERSPECTIVE = SECOND_TURN
+#Position constants
+KING_CONSTANTS = [[-3.0,-3.0,-3.0,-3.0,-2.0,-1.0,2.0,2.0],
+                  [-4.0,-4.0,-4.0,-4.0,-3.0,-2.0,2.0,3.0],
+                  [-4.0,-4.0,-4.0,-4.0,-3.0,-2.0,0.0,1.0],
+                  [-5.0,-5.0,-5.0,-5.0,-4.0,-2.0,0.0,0.0],
+                  [-5.0,-5.0,-5.0,-5.0,-4.0,-2.0,0.0,0.0],
+                  [-4.0,-4.0,-4.0,-4.0,-3.0,-2.0,0.0,1.0],
+                  [-4.0,-4.0,-4.0,-4.0,-3.0,-2.0,2.0,3.0],
+                  [-3.0,-3.0,-3.0,-3.0,-2.0,-1.0,2.0,2.0]]
+QUEEN_CONSTANTS = [[-2.0,-1.0,-1.0,-0.5,0.0,-1.0,-1.0,-2.0],
+                   [-1.0,0.0,0.0,0.0,0.0,0.5,0.0,-1.0],
+                   [-1.0,0.0,0.5,0.5,0.5,0.5,0.5,-1.0],
+                   [-0.5,0.0,0.5,0.5,0.5,0.5,0.0,-0.5],
+                   [-0.5,0.0,0.5,0.5,0.5,0.5,0.0,-0.5],
+                   [-1.0,0.0,0.5,0.5,0.5,0.5,0.5,-1.0],
+                   [-1.0,0.0,0.0,0.0,0.0,0.5,0.0,-1.0],
+                   [-2.0,-1.0,-1.0,-0.5,0.0,-1.0,-1.0,-2.0]]
+ROOK_CONSTANTS = [[0.0,0.5,-0.5,-0.5,-0.5,-0.5,-0.5,0.0],
+                  [0.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0],
+                  [0.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0],
+                  [0.0,1.0,0.0,0.0,0.0,0.0,0.0,0.5],
+                  [0.0,1.0,0.0,0.0,0.0,0.0,0.0,0.5],
+                  [0.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0],
+                  [0.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0],
+                  [0.0,0.5,-0.5,-0.5,-0.5,-0.5,-0.5,0.0]]
+BISHOP_CONSTANTS = [[-2.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-2.0],
+                    [-1.0,0.0,0.0,0.5,0.0,1.0,0.5,-1.0],
+                    [-1.0,0.0,0.5,0.5,1.0,1.0,0.0,-1.0],
+                    [-1.0,0.0,1.0,1.0,1.0,1.0,0.0,-1.0],
+                    [-1.0,0.0,1.0,1.0,1.0,1.0,0.0,-1.0],
+                    [-1.0,0.0,0.5,0.5,1.0,1.0,0.0,-1.0],
+                    [-1.0,0.0,0.0,0.5,0.0,1.0,0.5,-1.0],
+                    [-2.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-2.0]]
+KNIGHT_CONSTANTS = [[-5.0,-4.0,-3.0,-3.0,-3.0,-3.0,-4.0,-5.0],
+                    [-4.0,-2.0,0.0,0.5,0.0,0.5,-2.0,-4.0],
+                    [-3.0,0.0,1.0,1.5,1.5,1.0,0.0,-3.0],
+                    [-3.0,0.0,1.5,2.0,2.0,1.5,0.5,-3.0],
+                    [-3.0,0.0,1.5,2.0,2.0,1.5,0.5,-3.0],
+                    [-3.0,0.0,1.0,1.5,1.5,1.0,0.0,-3.0],
+                    [-4.0,-2.0,0.0,0.5,0.0,0.5,-2.0,-4.0],
+                    [-5.0,-4.0,-3.0,-3.0,-3.0,-3.0,-4.0,-5.0]]
+PAWN_CONSTANTS = [[0.0,5.0,1.0,0.5,0.0,0.5,0.5,0.0],
+                  [0.0,5.0,1.0,0.5,0.0,-0.5,1.0,0.0],
+                  [0.0,5.0,2.0,1.0,0.0,-1.0,1.0,0.0],
+                  [0.0,5.0,3.0,2.5,2.0,0.0,-2.0,0.0],
+                  [0.0,5.0,3.0,2.5,2.0,0.0,-2.0,0.0],
+                  [0.0,5.0,2.0,1.0,0.0,-1.0,1.0,0.0],
+                  [0.0,5.0,1.0,0.5,0.0,-0.5,1.0,0.0],
+                  [0.0,5.0,1.0,0.5,0.0,0.5,0.5,0.0]]
+CONSTANTS_DICT = {'king': KING_CONSTANTS, 'queen': QUEEN_CONSTANTS, 
+                  'rook': ROOK_CONSTANTS, 'bishop': BISHOP_CONSTANTS, 
+                  'knight': KNIGHT_CONSTANTS, 'pawn': PAWN_CONSTANTS}
 
 def coord_to_pixel(x,y):
     """Returns the pixel location of a provided coordinate"""
@@ -760,6 +783,15 @@ def toggle_turn():
     for side in Side.sides:
         for piece in side:
             piece.update_rect()
+
+def evaluate_board():
+    """Evaluates the current state of the board based on piece locations"""
+    first_value = 0
+    second_value = 0
+
+
+
+    return first_value - second_value
 
 #Screen and clock set up
 pygame.init()
