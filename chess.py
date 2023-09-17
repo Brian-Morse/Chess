@@ -14,6 +14,7 @@ class Piece(pygame.sprite.Sprite):
         self.has_moved = has_moved
         self.dirs = []
         self.range = 1
+        self.val = 0
         self.is_clicked = False
 
     def set_side(self, side, sides):
@@ -35,6 +36,10 @@ class Piece(pygame.sprite.Sprite):
 
     def get_type(self):
         return self.type
+
+    def get_val(self):
+        """Returns the value of this piece"""
+        return self.val
 
     def get_has_moved(self):
         """Return the status of if this piece has moved"""
@@ -198,6 +203,7 @@ class Pawn(Piece):
     def __init__(self, pos, has_moved = False):
         """Initiates the Pawn piece"""
         super().__init__('pawn', pos, has_moved)
+        self.val = 10
 
     def get_pressure(self):
         """Returns the diagonal points of applied pressure"""
@@ -310,6 +316,7 @@ class Knight(Piece):
         super().__init__('knight',pos,has_moved)
         #Set up the knight moves
         self.dirs = [(2,1),(2,-1),(-2,1),(-2,-1),(1,2),(1,-2),(-1,2),(-1,-2)]
+        self.val = 30
 
 class Bishop(Piece):
     """A bishop chess piece, moves in diagonals"""
@@ -319,6 +326,7 @@ class Bishop(Piece):
         #Set up the bishop moves
         self.dirs = [(1,1),(-1,-1),(1,-1),(-1,1)]
         self.range = -1
+        self.val = 30
 
 class Rook(Piece):
     """A rook chess piece, moves in horizontals"""
@@ -328,6 +336,7 @@ class Rook(Piece):
         #Set up the rook moves
         self.dirs = [(1,0),(-1,0),(0,1),(0,-1)]
         self.range = -1
+        self.val = 50
 
 class Queen(Piece):
     """A queen chess piece, moves in all directions, most powerful piece"""
@@ -337,6 +346,7 @@ class Queen(Piece):
         #Set up the queen moves
         self.dirs = [(1,1),(-1,-1),(1,-1),(-1,1),(1,0),(-1,0),(0,1),(0,-1)]
         self.range = -1
+        self.val = 90
 
 class King(Piece):
     """A king chess piece, the most important of all pieces"""
@@ -345,6 +355,7 @@ class King(Piece):
         super().__init__('king',pos,has_moved)
         #Set up the king moves
         self.dirs = [(1,1),(-1,-1),(1,-1),(-1,1),(1,0),(-1,0),(0,1),(0,-1)]
+        self.val = 900
     
     def get_move_locs(self):
         """Get all the moves for the king"""
@@ -536,13 +547,11 @@ class Side(pygame.sprite.Group):
                                     if rook.get_pos() == (7,7)]
                         mov_rook[0].set_pos((5,7))
                         mov_rook[0].set_has_moved(True)
-                        mov_rook[0].update_rect()
                     else:
                         mov_rook = [rook for rook in self 
                                     if rook.get_pos() == (7,0)]
                         mov_rook[0].set_pos((5,0))
                         mov_rook[0].set_has_moved(True)
-                        mov_rook[0].update_rect()
                 #Check for long castling
                 if (piece.get_type() == 'king' and 
                     self.last_move[2][0] - self.last_move[1][0] == -2):
@@ -551,13 +560,11 @@ class Side(pygame.sprite.Group):
                                     if rook.get_pos() == (0,7)]
                         mov_rook[0].set_pos((3,7))
                         mov_rook[0].set_has_moved(True)
-                        mov_rook[0].update_rect()
                     else:
                         mov_rook = [rook for rook in self 
                                     if rook.get_pos() == (0,0)]
                         mov_rook[0].set_pos((3,0))
                         mov_rook[0].set_has_moved(True)
-                        mov_rook[0].update_rect()
 
 
         #Check for checkmate and stalemate
@@ -625,13 +632,11 @@ class Side(pygame.sprite.Group):
                                 if rook.get_pos() == (5,7)]
                     mov_rook[0].set_pos((7,7))
                     mov_rook[0].set_has_moved(False)
-                    mov_rook[0].update_rect()
                 else:
                     mov_rook = [rook for rook in Side.sides[1] 
                                 if rook.get_pos() == (5,0)]
                     mov_rook[0].set_pos((7,0))
                     mov_rook[0].set_has_moved(False)
-                    mov_rook[0].update_rect()
             #Check if rook needs to be moved back due to long castling
             if (undid_move[0].get_type() == 'king' and 
                 undid_move[2][0] - undid_move[1][0] == -2):
@@ -640,13 +645,11 @@ class Side(pygame.sprite.Group):
                                     if rook.get_pos() == (3,7)]
                         mov_rook[0].set_pos((0,7))
                         mov_rook[0].set_has_moved(False)
-                        mov_rook[0].update_rect()
                     else:
                         mov_rook = [rook for rook in Side.sides[1] 
                                     if rook.get_pos() == (3,0)]
                         mov_rook[0].set_pos((0,0))
                         mov_rook[0].set_has_moved(False)
-                        mov_rook[0].update_rect()
             #Correct the last move info
             if undid_move[0].check_side():
                 if Side.move_count >= 2:
@@ -789,10 +792,22 @@ def evaluate_board():
     first_value = 0
     second_value = 0
 
-
+    for piece in Side.sides[0]:
+        first_value += piece.get_val()
+        x,y = piece.get_pos()
+        first_value += CONSTANTS_DICT[piece.get_type()][x][y]
+    for piece in Side.sides[1]:
+        second_value += piece.get_val()
+        x,y = piece.get_pos()
+        x = abs(x-(WIDTH-1))
+        y = abs(y-(HEIGHT-1))
+        second_value += CONSTANTS_DICT[piece.get_type()][x][y]
 
     return first_value - second_value
 
+def minimax(depth, alpha, beta, max_player):
+    """Finds the best move that the side could make"""
+    
 #Screen and clock set up
 pygame.init()
 screen = pygame.display.set_mode((WIDTH*SQUARE_SIZE,HEIGHT*SQUARE_SIZE))
