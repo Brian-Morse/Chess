@@ -565,13 +565,11 @@ class Side(pygame.sprite.Group):
                                     if rook.get_pos() == (7,7)]
                         mov_rook[0].set_pos((5,7))
                         mov_rook[0].set_has_moved(True)
-                        mov_rook[0].update_rect()
                     else:
                         mov_rook = [rook for rook in self 
                                     if rook.get_pos() == (7,0)]
                         mov_rook[0].set_pos((5,0))
                         mov_rook[0].set_has_moved(True)
-                        mov_rook[0].update_rect()
                 #Check for long castling
                 if (piece.get_type() == 'king' and 
                     self.last_move[2][0] - self.last_move[1][0] == -2):
@@ -580,13 +578,11 @@ class Side(pygame.sprite.Group):
                                     if rook.get_pos() == (0,7)]
                         mov_rook[0].set_pos((3,7))
                         mov_rook[0].set_has_moved(True)
-                        mov_rook[0].update_rect()
                     else:
                         mov_rook = [rook for rook in self 
                                     if rook.get_pos() == (0,0)]
                         mov_rook[0].set_pos((3,0))
                         mov_rook[0].set_has_moved(True)
-                        mov_rook[0].update_rect()
 
 
         #Check for checkmate and stalemate
@@ -654,13 +650,11 @@ class Side(pygame.sprite.Group):
                                 if rook.get_pos() == (5,7)]
                     mov_rook[0].set_pos((7,7))
                     mov_rook[0].set_has_moved(False)
-                    mov_rook[0].update_rect()
                 else:
                     mov_rook = [rook for rook in Side.sides[1] 
                                 if rook.get_pos() == (5,0)]
                     mov_rook[0].set_pos((7,0))
                     mov_rook[0].set_has_moved(False)
-                    mov_rook[0].update_rect()
             #Check if rook needs to be moved back due to long castling
             if (undid_move[0].get_type() == 'king' and 
                 undid_move[2][0] - undid_move[1][0] == -2):
@@ -669,13 +663,11 @@ class Side(pygame.sprite.Group):
                                     if rook.get_pos() == (3,7)]
                         mov_rook[0].set_pos((0,7))
                         mov_rook[0].set_has_moved(False)
-                        mov_rook[0].update_rect()
                     else:
                         mov_rook = [rook for rook in Side.sides[1] 
                                     if rook.get_pos() == (3,0)]
                         mov_rook[0].set_pos((0,0))
                         mov_rook[0].set_has_moved(False)
-                        mov_rook[0].update_rect()
             #Correct the last move info
             if undid_move[0].check_side():
                 if Side.move_count >= 2:
@@ -706,7 +698,6 @@ class Side(pygame.sprite.Group):
                 piece[0].kill()
             #Toggle the move
             toggle_turn()
-
 
 #Constants
 SQUARE_SIZE = 80
@@ -771,7 +762,7 @@ clock = pygame.time.Clock()
 game_state = ACTIVE_GAME
 turn = FIRST_TURN
 show_end_screen = True
-flip_screen = True
+flip_screen = False
 perspective = FIRST_PERSPECTIVE
 
 #Background
@@ -1012,7 +1003,6 @@ while True:
         #Draw pieces
         first_pieces.draw(screen)
         second_pieces.draw(screen)
-
     elif game_state == FIRST_PROMOTION:
         if perspective == FIRST_PERSPECTIVE:
             screen.blit(first_promote_surf,coord_to_pixel(*first_pieces.get_last_move()[2]))
